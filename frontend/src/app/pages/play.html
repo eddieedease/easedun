@@ -1,0 +1,82 @@
+@if (level.isLoading()) {
+  <p class="page">Opening the dungeon gate…</p>
+} @else if (level.error()) {
+  <p class="page error">{{ message(level.error()) }}</p>
+} @else if (engine(); as game) {
+  <div class="layout">
+    <section class="panel inventory">
+      <div class="panel-title">{{ level.value()?.name }}</div>
+      <dl class="stats">
+        <dt>💰 Gold</dt><dd>{{ game.gold() }}</dd>
+        <dt>🧪 Potions</dt><dd>{{ game.potions() }}</dd>
+        <dt>👣 Steps</dt><dd>{{ game.steps() }}</dd>
+        <dt>🎲 Seed</dt><dd>{{ game.scenario.seed }}</dd>
+      </dl>
+      <div class="slots" aria-label="Inventory (placeholder)">
+        @for (slot of [1, 2, 3, 4, 5, 6, 7, 8]; track slot) {
+          <span class="slot"></span>
+        }
+      </div>
+      <button class="btn" (click)="game.drinkPotion()" [disabled]="game.potions() < 1">Drink potion (H)</button>
+    </section>
+
+    <section class="view">
+      <app-dungeon-view [engine]="game" />
+      @if (game.status() !== 'playing') {
+        <div class="overlay">
+          <h2>{{ game.status() === 'won' ? 'Victory!' : 'Defeat' }}</h2>
+          <p>{{ game.log().at(-1) }}</p>
+          <div class="overlay-actions">
+            <button class="btn primary" (click)="restart(false)">New scenario</button>
+            <button class="btn" (click)="restart(true)">Retry same seed</button>
+            <a class="btn" routerLink="/">Leave</a>
+          </div>
+        </div>
+      }
+    </section>
+
+    <section class="panel party">
+      <div class="panel-title">Party</div>
+      @for (hero of game.party(); track hero.name) {
+        <div class="hero" [class.dead]="hero.hp === 0">
+          <span class="portrait">{{ hero.hp === 0 ? '🪦' : hero.icon }}</span>
+          <div class="hero-info">
+            <div>{{ hero.name }} <small>{{ hero.cls }}</small></div>
+            <div class="bar"><span [style.width]="hpPercent(hero.hp, hero.maxHp)"></span></div>
+            <small>{{ hero.hp }} / {{ hero.maxHp }}</small>
+          </div>
+        </div>
+      }
+    </section>
+
+    <section class="panel map">
+      <div class="panel-title">Map</div>
+      <app-automap [engine]="game" />
+    </section>
+
+    <section class="panel log" aria-live="polite">
+      <div class="panel-title">Log</div>
+      @for (line of lastLog(); track $index; let last = $last) {
+        <p [class.latest]="last">{{ line }}</p>
+      }
+    </section>
+
+    <section class="panel controls" aria-label="Movement controls">
+      <div class="pad">
+        <button class="btn" (click)="game.turn(-1)" title="Turn left (Q / ←)">↺</button>
+        <button class="btn" (click)="game.move(0)" title="Forward (W / ↑)">▲</button>
+        <button class="btn" (click)="game.turn(1)" title="Turn right (E / →)">↻</button>
+        <button class="btn" (click)="game.move(3)" title="Strafe left (A)">◀</button>
+        <button class="btn" (click)="game.move(2)" title="Back (S / ↓)">▼</button>
+        <button class="btn" (click)="game.move(1)" title="Strafe right (D)">▶</button>
+      </div>
+      <div class="meta">
+        <button class="btn" (click)="restart(false)" title="New random scenario">🎲</button>
+        <a class="btn" routerLink="/" title="Back to level select">🚪</a>
+        @if (auth.adminView()) {
+          <a class="btn" [routerLink]="['/admin/levels', id()]" title="Edit this level">🛠</a>
+        }
+      </div>
+    </section>
+  </div>
+}

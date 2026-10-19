@@ -1,0 +1,11 @@
+{
+  "name": "dungeon-crawler",
+  "private": true,
+  "scripts": {
+    "backend:up": "docker compose -p dungeon up -d --build",
+    "backend:down": "docker compose -p dungeon down",
+    "backend:reset": "docker compose -p dungeon down -v && rm -f backend/server/config.php",
+    "start": "cd frontend && npx ng serve",
+    "package": "./scripts/build-package.sh"
+  }
+}

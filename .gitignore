@@ -1,0 +1,6 @@
+node_modules/
+/frontend/.angular/
+/frontend/dist/
+/dist/
+/backend/server/config.php
+.DS_Store

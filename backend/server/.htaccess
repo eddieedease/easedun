@@ -1,0 +1,2 @@
+# Private code and config: never serve anything from this folder.
+Require all denied

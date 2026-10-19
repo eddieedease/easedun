@@ -1,0 +1,78 @@
+<div class="page">
+  <div class="head">
+    <h1>{{ id() ? 'Edit level' : 'New level' }}</h1>
+    <a routerLink="/admin">← All levels</a>
+  </div>
+
+  @if (loading()) {
+    <p>Loading…</p>
+  } @else {
+    <div class="editor">
+      <section class="panel side">
+        <div class="panel-title">Details</div>
+        <label for="name">Name</label>
+        <input id="name" [(ngModel)]="name" maxlength="100" />
+        <label for="desc">Description</label>
+        <textarea id="desc" rows="3" [(ngModel)]="description"></textarea>
+        <label class="check"><input type="checkbox" [(ngModel)]="published" /> Published (visible to players)</label>
+
+        <div class="panel-title spaced">Size</div>
+        <div class="size">
+          <input type="number" min="5" max="64" [(ngModel)]="sizeW" aria-label="Width" />
+          ×
+          <input type="number" min="5" max="64" [(ngModel)]="sizeH" aria-label="Height" />
+          <button class="btn" (click)="resize()">Apply</button>
+        </div>
+
+        <div class="panel-title spaced">Scenario randomizer</div>
+        <label for="chance">Chance a "?" spawns something: {{ (data().scenario.spawnChance * 100).toFixed(0) }}%</label>
+        <input id="chance" type="range" min="0" max="1" step="0.05"
+               [ngModel]="data().scenario.spawnChance" (ngModelChange)="setScenario('spawnChance', +$event)" />
+        <div class="weights">
+          <label>Monster <input type="number" min="0" max="20" [ngModel]="data().scenario.weights.monster" (ngModelChange)="setScenario('monster', +$event)" /></label>
+          <label>Treasure <input type="number" min="0" max="20" [ngModel]="data().scenario.weights.treasure" (ngModelChange)="setScenario('treasure', +$event)" /></label>
+          <label>Trap <input type="number" min="0" max="20" [ngModel]="data().scenario.weights.trap" (ngModelChange)="setScenario('trap', +$event)" /></label>
+        </div>
+        <p class="hint">Each run picks one random S as start and one random E as the real exit. More of them means more variety.</p>
+      </section>
+
+      <section class="panel canvas-wrap">
+        <div class="toolbar" role="radiogroup" aria-label="Paint tool">
+          @for (t of tools; track t.cell) {
+            <button class="btn tool" [class.active]="tool() === t.cell" (click)="tool.set(t.cell)" [title]="t.hint"
+                    role="radio" [attr.aria-checked]="tool() === t.cell">
+              <span class="swatch" [attr.data-cell]="t.cell">{{ t.cell === '#' || t.cell === '.' ? '' : t.cell }}</span>{{ t.label }}
+            </button>
+          }
+        </div>
+        <div class="grid" [style.grid-template-columns]="'repeat(' + data().width + ', 1fr)'" (pointerleave)="painting.set(false)">
+          @for (row of data().rows; track y; let y = $index) {
+            @for (c of row; track x; let x = $index) {
+              <div class="cell" [attr.data-cell]="c" (pointerdown)="paint(x, y, true); $event.preventDefault()" (pointerenter)="paint(x, y)">
+                {{ c === '#' || c === '.' ? '' : c }}
+              </div>
+            }
+          }
+        </div>
+        <p class="hint">
+          Starts {{ counts().S }} · Exits {{ counts().E }} · Random {{ counts()['?'] }} · Monsters {{ counts().M }} · Treasure {{ counts().T }}
+        </p>
+        @for (p of problems(); track p) {
+          <p class="error">{{ p }}</p>
+        }
+        @if (error()) {
+          <p class="error">{{ error() }}</p>
+        }
+        @if (notice()) {
+          <p class="ok">{{ notice() }}</p>
+        }
+        <div class="actions">
+          <button class="btn" (click)="clear()">Reset grid</button>
+          <span class="spacer"></span>
+          <button class="btn" (click)="save()" [disabled]="saving() || problems().length > 0">Save</button>
+          <button class="btn primary" (click)="save(true)" [disabled]="saving() || problems().length > 0">Save &amp; playtest</button>
+        </div>
+      </section>
+    </div>
+  }
+</div>
