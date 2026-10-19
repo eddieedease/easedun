@@ -9,9 +9,9 @@ import { Auth } from '../core/auth';
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <div class="page">
-      <h1>Choose your dungeon</h1>
+      <h1>Choose your district</h1>
       @if (levels.isLoading()) {
-        <p>Lighting torches…</p>
+        <p>Booting up…</p>
       } @else if (levels.error()) {
         <p class="error">{{ message(levels.error()) }}</p>
       } @else {
@@ -25,7 +25,7 @@ import { Auth } from '../core/auth';
               }
             </a>
           } @empty {
-            <p>No dungeons have been published yet.</p>
+            <p>No districts have been published yet.</p>
           }
         </div>
       }

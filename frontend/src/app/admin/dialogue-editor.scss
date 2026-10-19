@@ -1,0 +1,48 @@
+:host { display: flex; flex-direction: column; gap: 10px; }
+
+.hint { color: var(--muted); font-size: .85em; margin: 0; }
+
+.node {
+  border: 1px solid var(--edge-light);
+  border-left: 3px solid var(--neon-pink);
+  background: var(--panel-dark);
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  textarea { width: 100%; resize: vertical; }
+}
+
+.node-head, .choice-row, .effect { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.node-id { width: 160px; color: var(--neon-pink); }
+.spacer { flex: 1; }
+
+.btn.mini { padding: 0 8px; font-size: .85em; }
+.btn.on { color: var(--neon-yellow); border-color: var(--neon-yellow); }
+
+.choice {
+  margin-left: 12px;
+  padding-left: 8px;
+  border-left: 1px dashed var(--edge-light);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.arrow { color: var(--neon-cyan); }
+.choice .label { flex: 1; min-width: 160px; }
+
+.effect { margin-left: 16px; font-size: .9em; }
+.effect input, .effect select { max-width: 200px; }
+.tag { color: var(--neon-yellow); }
+.add-effect { margin-left: 16px; align-self: flex-start; font-size: .85em; }
+
+.condition {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 4px 8px;
+  padding: 6px;
+  border: 1px dashed var(--neon-yellow);
+  font-size: .85em;
+  label { display: flex; flex-direction: column; }
+  input, select { width: 100%; }
+}

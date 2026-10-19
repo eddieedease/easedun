@@ -29,8 +29,8 @@ $manualConfig = null;
 if (is_installed()) {
     render_page(function () { ?>
         <h2>Already installed</h2>
-        <p>The dungeon is ready. For security, delete the <code>install/</code> folder from your server.</p>
-        <p><a class="btn" href="../">Enter the dungeon</a></p>
+        <p>The game is ready. For security, delete the <code>install/</code> folder from your server.</p>
+        <p><a class="btn" href="../">Open the game</a></p>
     <?php });
     exit;
 }
@@ -76,7 +76,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
             if ($values['demo'] === '1') {
                 $pdo->prepare("INSERT INTO {$p}levels (name, description, data, published, created_by) VALUES (?, ?, ?, 1, ?)")
-                    ->execute(['The Old Cellar', 'A small demo crypt. Starts, exits and encounters change every run.', json_encode(demo_level()), $adminId]);
+                    ->execute(['District 9: Neon Debt', 'A short demo story. Recover a stolen data chip and catch the metro out.', json_encode(demo_level()), $adminId]);
             }
             $pdo->commit();
 
@@ -116,11 +116,11 @@ function render_page(callable $body): void
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Dungeon installer</title>
+<title>Neon Streets installer</title>
 <style>
-  :root { --bg:#14110f; --panel:#231e1a; --edge:#4a3f35; --text:#e8dcc8; --muted:#a8977f; --accent:#d9a441; --bad:#d9534f; }
+  :root { --bg:#07060d; --panel:#0e0c1a; --edge:#4b3a80; --text:#d8e6ff; --muted:#7f86a8; --accent:#00f0ff; --bad:#ff2b6a; }
   * { box-sizing: border-box; }
-  body { margin:0; min-height:100vh; background:var(--bg); color:var(--text); font:16px/1.5 Georgia, serif; display:flex; justify-content:center; padding:24px 16px; }
+  body { margin:0; min-height:100vh; background:var(--bg); color:var(--text); font:16px/1.5 ui-monospace, monospace; display:flex; justify-content:center; padding:24px 16px; }
   main { width:100%; max-width:560px; background:var(--panel); border:3px solid var(--edge); padding:24px; box-shadow:0 0 0 3px #000; }
   h1 { margin:0 0 4px; color:var(--accent); letter-spacing:.05em; }
   h2 { color:var(--accent); font-size:1.1rem; border-bottom:1px solid var(--edge); padding-bottom:4px; margin-top:28px; }
@@ -128,7 +128,7 @@ function render_page(callable $body): void
   input[type=text], input[type=password], input[type=number] { width:100%; padding:8px; background:#120f0d; color:var(--text); border:1px solid var(--edge); font:inherit; }
   .row { display:grid; grid-template-columns:1fr 110px; gap:12px; }
   .check { display:flex; gap:8px; align-items:center; margin-top:12px; color:var(--text); }
-  .btn, button { display:inline-block; margin-top:24px; padding:10px 22px; background:var(--accent); color:#1a1208; border:0; font:bold 1rem Georgia, serif; cursor:pointer; text-decoration:none; }
+  .btn, button { display:inline-block; margin-top:24px; padding:10px 22px; background:var(--accent); color:#04121a; border:0; font:bold 1rem ui-monospace, monospace; cursor:pointer; text-decoration:none; }
   .errors { background:#3a1715; border:1px solid var(--bad); padding:8px 14px; }
   .hint { color:var(--muted); font-size:.85rem; }
   pre { background:#120f0d; border:1px solid var(--edge); padding:12px; overflow:auto; font-size:.8rem; }
@@ -136,7 +136,7 @@ function render_page(callable $body): void
 </style>
 </head>
 <body><main>
-  <h1>⚔ Dungeon installer</h1>
+  <h1>NEON//STREETS installer</h1>
   <?php $body(); ?>
 </main></body>
 </html>
@@ -151,7 +151,7 @@ render_page(function () use ($values, $errors, $done, $manualConfig, $devDefault
         <?php endif; ?>
         <p>You can now log in as <strong><?= h($values['admin_user']) ?></strong>.</p>
         <p class="hint">For security, delete the <code>install/</code> folder from your server.</p>
-        <a class="btn" href="../">Enter the dungeon</a>
+        <a class="btn" href="../">Open the game</a>
         <?php return;
     } ?>
     <p class="hint">Fill in your database details. The installer creates the tables and your admin account.

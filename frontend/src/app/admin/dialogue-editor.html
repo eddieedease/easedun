@@ -1,0 +1,90 @@
+<ng-template #conditionTpl let-cond>
+  <div class="condition">
+    <label>Needs flag <input [ngModel]="cond.flag ?? ''" (ngModelChange)="setCondition(cond, 'flag', $event)" placeholder="flag" /></label>
+    <label>Not flag <input [ngModel]="cond.notFlag ?? ''" (ngModelChange)="setCondition(cond, 'notFlag', $event)" placeholder="flag" /></label>
+    <label>Has item
+      <select [ngModel]="cond.item ?? ''" (ngModelChange)="setCondition(cond, 'item', $event)">
+        <option value="">—</option>
+        @for (item of items(); track item.id) {
+          <option [value]="item.id">{{ item.sprite }} {{ item.name }}</option>
+        }
+      </select>
+    </label>
+    <label>Min credits <input type="number" min="0" [ngModel]="cond.minCredits ?? 0" (ngModelChange)="setCondition(cond, 'minCredits', +$event)" /></label>
+  </div>
+</ng-template>
+
+<p class="hint">
+  When the player starts a conversation, the <strong>first node from the top whose condition matches</strong> opens.
+  Put special cases (with conditions) above the default greeting.
+</p>
+
+@for (node of nodes(); track node; let i = $index, first = $first, last = $last) {
+  <div class="node">
+    <div class="node-head">
+      <input class="node-id" [ngModel]="node.id" (change)="renameNode(node, $any($event.target).value)" title="Node id" />
+      <button class="btn mini" (click)="toggleCondition(node)" [class.on]="node.requires">if…</button>
+      <span class="spacer"></span>
+      <button class="btn mini" (click)="moveNode(i, -1)" [disabled]="first" aria-label="Move up">↑</button>
+      <button class="btn mini" (click)="moveNode(i, 1)" [disabled]="last" aria-label="Move down">↓</button>
+      <button class="btn mini danger" (click)="removeNode(i)" aria-label="Delete node">✕</button>
+    </div>
+    @if (node.requires) {
+      <ng-container *ngTemplateOutlet="conditionTpl; context: { $implicit: node.requires }" />
+    }
+    <textarea rows="3" [(ngModel)]="node.text" (ngModelChange)="touch()" placeholder="What is said or shown…"></textarea>
+
+    @for (choice of node.choices; track choice; let ci = $index) {
+      <div class="choice">
+        <div class="choice-row">
+          <span class="arrow">▸</span>
+          <input class="label" [(ngModel)]="choice.label" (ngModelChange)="touch()" placeholder="Choice text" />
+          <select [(ngModel)]="choice.next" (ngModelChange)="touch()" title="Go to">
+            <option value="">(end conversation)</option>
+            @for (target of nodes(); track target) {
+              <option [value]="target.id">→ {{ target.id }}</option>
+            }
+          </select>
+          <button class="btn mini" (click)="toggleCondition(choice)" [class.on]="choice.requires">if…</button>
+          <button class="btn mini danger" (click)="removeChoice(node, ci)" aria-label="Delete choice">✕</button>
+        </div>
+        @if (choice.requires) {
+          <ng-container *ngTemplateOutlet="conditionTpl; context: { $implicit: choice.requires }" />
+        }
+        @for (effect of choice.effects; track effect; let ei = $index) {
+          <div class="effect">
+            <span class="tag">{{ effectLabels[effect.type] }}</span>
+            @switch (effect.type) {
+              @case ('setFlag') { <input [(ngModel)]="$any(effect).flag" (ngModelChange)="touch()" placeholder="flag name" /> }
+              @case ('clearFlag') { <input [(ngModel)]="$any(effect).flag" (ngModelChange)="touch()" placeholder="flag name" /> }
+              @case ('credits') { <input type="number" [(ngModel)]="$any(effect).amount" (ngModelChange)="touch()" /> }
+              @case ('heal') { <input type="number" [(ngModel)]="$any(effect).amount" (ngModelChange)="touch()" /> }
+              @case ('giveItem') {
+                <select [(ngModel)]="$any(effect).item" (ngModelChange)="touch()">
+                  <option value="">— pick item —</option>
+                  @for (item of items(); track item.id) { <option [value]="item.id">{{ item.sprite }} {{ item.name }}</option> }
+                </select>
+              }
+              @case ('takeItem') {
+                <select [(ngModel)]="$any(effect).item" (ngModelChange)="touch()">
+                  <option value="">— pick item —</option>
+                  @for (item of items(); track item.id) { <option [value]="item.id">{{ item.sprite }} {{ item.name }}</option> }
+                </select>
+              }
+            }
+            <button class="btn mini danger" (click)="removeEffect(choice, ei)" aria-label="Delete effect">✕</button>
+          </div>
+        }
+        <select class="add-effect" [ngModel]="''" (ngModelChange)="addEffect(choice, $event)">
+          <option value="">+ effect…</option>
+          @for (t of effectTypes; track t) { <option [value]="t">{{ effectLabels[t] }}</option> }
+        </select>
+      </div>
+    }
+    <button class="btn mini" (click)="addChoice(node)">+ choice</button>
+    @if (!node.choices.length) {
+      <span class="hint">No choices: the player just reads this and the conversation ends.</span>
+    }
+  </div>
+}
+<button class="btn" (click)="addNode()">+ Add node</button>

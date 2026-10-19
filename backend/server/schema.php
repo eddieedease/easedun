@@ -32,31 +32,8 @@ function schema_statements(string $p): array
     ];
 }
 
-/** A small hand-made level so a fresh install has something to play. */
+/** A hand-made story level so a fresh install has something to play. */
 function demo_level(): array
 {
-    return [
-        'width' => 16,
-        'height' => 14,
-        'rows' => [
-            '################',
-            '#S..#......?...#',
-            '#.#.#.####.###.#',
-            '#.#...#..#...#.#',
-            '#.#####..#.#.#.#',
-            '#...?....#.#...#',
-            '###.####.#.###.#',
-            '#...#..T.#...#E#',
-            '#.###.####.#.###',
-            '#..?#....#.#...#',
-            '#.#.####.#.###.#',
-            '#.#....M.....?S#',
-            '#E##.#####.#####',
-            '################',
-        ],
-        'scenario' => [
-            'spawnChance' => 0.75,
-            'weights' => ['monster' => 3, 'treasure' => 2, 'trap' => 1],
-        ],
-    ];
+    return json_decode(file_get_contents(__DIR__ . '/demo-level.json'), true);
 }

@@ -1,0 +1,408 @@
+{
+ "version": 2,
+ "width": 30,
+ "height": 24,
+ "rows": [
+  "##############################",
+  "#S......#........#...........#",
+  "#.####..#.######.#.#########.#",
+  "#.####....######...#########.#",
+  "#.####.##.######.#.##....###.#",
+  "#......##........#.##.##.###.#",
+  "###.#####.###.####....##.....#",
+  "#?......#.###.#######.######.#",
+  "#.#####.#.....#######.######.#",
+  "#.#####.#####.........######.#",
+  "#.......#####.#######........#",
+  "#######.......#######.######.#",
+  "#?....#.#####.....?...######.#",
+  "#.###.#.#####.#######.......E#",
+  "#.###...#####.#######.####.###",
+  "#.###.#.......#######.####...#",
+  "#.....#.#####.........####.#.#",
+  "#####.#.#####.#######.####.#.#",
+  "#?....#.......#######......#.#",
+  "#.#########.#.#######.####.#.#",
+  "#...........#.........####.#S#",
+  "#.#########.#.#######.####...#",
+  "#E..........#.......?........#",
+  "##############################"
+ ],
+ "theme": "neon-night",
+ "story": {
+  "intro": "Rain hammers District 9.\nYour fixer, Juno, owes you a metro pass. But first she needs a favour: the Chrome Jackals stole a data chip from her runner.\nFind Juno. Get the chip. Catch the metro out.",
+  "outro": "The metro doors hiss shut. District 9 slides away in a smear of neon.\nJuno's credits are already in your account. Somewhere, Razor is still cursing your name.",
+  "exitFlag": "delivered",
+  "exitLockedText": "The metro turnstile flashes red: VALID PASS REQUIRED.\nJuno has your pass."
+ },
+ "actors": [
+  {
+   "id": "juno",
+   "name": "Juno, fixer",
+   "kind": "npc",
+   "sprite": "🧑‍🎤",
+   "dialogue": [
+    {
+     "id": "done",
+     "text": "Pass is synced to your ID. The metro's waiting, choom. Don't get flatlined on the way.",
+     "choices": [],
+     "requires": {
+      "flag": "delivered"
+     }
+    },
+    {
+     "id": "has-chip",
+     "text": "Is that... my chip? Hand it over and we're square.",
+     "choices": [
+      {
+       "label": "Here you go.",
+       "next": "thanks",
+       "effects": [
+        {
+         "type": "takeItem",
+         "item": "chip"
+        },
+        {
+         "type": "giveItem",
+         "item": "pass"
+        },
+        {
+         "type": "setFlag",
+         "flag": "delivered"
+        },
+        {
+         "type": "credits",
+         "amount": 50
+        }
+       ]
+      },
+      {
+       "label": "Not yet.",
+       "next": "",
+       "effects": []
+      }
+     ],
+     "requires": {
+      "item": "chip"
+     }
+    },
+    {
+     "id": "start",
+     "text": "You're late. The Chrome Jackals jumped my runner and took a data chip. Razor has it, east side, past the noodle stand.\nGet it back and the metro pass is yours.",
+     "choices": [
+      {
+       "label": "Any tips?",
+       "next": "tips",
+       "effects": []
+      },
+      {
+       "label": "I'm on it.",
+       "next": "",
+       "effects": [
+        {
+         "type": "setFlag",
+         "flag": "briefed"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "id": "tips",
+     "text": "Razor's greedy, so credits talk. Or bring something heavy. Somebody dropped a pipe wrench in the south alleys.",
+     "choices": [
+      {
+       "label": "Got it.",
+       "next": "",
+       "effects": []
+      }
+     ]
+    },
+    {
+     "id": "thanks",
+     "text": "Clean work. The pass is on your deck. Now get gone before the Jackals regroup.",
+     "choices": []
+    }
+   ]
+  },
+  {
+   "id": "razor",
+   "name": "Razor",
+   "kind": "enemy",
+   "sprite": "🦹",
+   "hp": 26,
+   "attack": [
+    3,
+    7
+   ],
+   "hostile": false,
+   "drops": [
+    "chip"
+   ],
+   "defeatFlag": "razor_down",
+   "dialogue": [
+    {
+     "id": "after",
+     "text": "We're done here. Walk.",
+     "choices": [],
+     "requires": {
+      "flag": "chip_bought"
+     }
+    },
+    {
+     "id": "start",
+     "text": "Look who wandered onto Jackal turf. You here about Juno's chip? It ain't free.",
+     "choices": [
+      {
+       "label": "Buy it. (40¢)",
+       "next": "sold",
+       "effects": [
+        {
+         "type": "credits",
+         "amount": -40
+        },
+        {
+         "type": "giveItem",
+         "item": "chip"
+        },
+        {
+         "type": "setFlag",
+         "flag": "chip_bought"
+        }
+       ],
+       "requires": {
+        "minCredits": 40
+       }
+      },
+      {
+       "label": "Hand it over. Now.",
+       "next": "",
+       "effects": [
+        {
+         "type": "fight"
+        }
+       ]
+      },
+      {
+       "label": "Just passing through.",
+       "next": "",
+       "effects": []
+      }
+     ]
+    },
+    {
+     "id": "sold",
+     "text": "Pleasure doing business. Now scram.",
+     "choices": []
+    }
+   ]
+  },
+  {
+   "id": "drone",
+   "name": "Jackal drone",
+   "kind": "enemy",
+   "sprite": "🤖",
+   "hp": 8,
+   "attack": [
+    1,
+    4
+   ],
+   "hostile": true,
+   "drops": [],
+   "dialogue": []
+  },
+  {
+   "id": "jackal",
+   "name": "Chrome Jackal",
+   "kind": "enemy",
+   "sprite": "🧟",
+   "hp": 12,
+   "attack": [
+    2,
+    5
+   ],
+   "hostile": true,
+   "drops": [
+    "creds"
+   ],
+   "dialogue": []
+  },
+  {
+   "id": "vendor",
+   "name": "Noodle vendor",
+   "kind": "npc",
+   "sprite": "🍜",
+   "dialogue": [
+    {
+     "id": "start",
+     "text": "Noodles! Stims! Fifteen credits, best deal in District 9.",
+     "choices": [
+      {
+       "label": "Buy a stim. (15¢)",
+       "next": "enjoy",
+       "effects": [
+        {
+         "type": "credits",
+         "amount": -15
+        },
+        {
+         "type": "giveItem",
+         "item": "stim"
+        }
+       ],
+       "requires": {
+        "minCredits": 15
+       }
+      },
+      {
+       "label": "No thanks.",
+       "next": "",
+       "effects": []
+      }
+     ]
+    },
+    {
+     "id": "enjoy",
+     "text": "Enjoy, choom. Don't tell the corps where you got it.",
+     "choices": []
+    }
+   ]
+  },
+  {
+   "id": "terminal",
+   "name": "Public terminal",
+   "kind": "terminal",
+   "sprite": "📟",
+   "dialogue": [
+    {
+     "id": "start",
+     "text": "> CITYNET BULLETIN\n> Metro line 3 restored. Valid pass required.\n> Curfew in effect. Report Jackal activity to your local precinct.",
+     "choices": []
+    }
+   ]
+  },
+  {
+   "id": "holo",
+   "name": "Holo-ad",
+   "kind": "trigger",
+   "sprite": "💬",
+   "dialogue": [
+    {
+     "id": "start",
+     "text": "A holo-ad flickers overhead: \"ARASAKA DREAMS: sleep is a subscription.\"\nThe rain tastes like copper.",
+     "choices": []
+    }
+   ]
+  },
+  {
+   "id": "chip",
+   "name": "Data chip",
+   "kind": "item",
+   "sprite": "💾",
+   "dialogue": []
+  },
+  {
+   "id": "pass",
+   "name": "Metro pass",
+   "kind": "item",
+   "sprite": "🎫",
+   "dialogue": []
+  },
+  {
+   "id": "stim",
+   "name": "Stim",
+   "kind": "item",
+   "sprite": "💉",
+   "heal": 15,
+   "dialogue": []
+  },
+  {
+   "id": "creds",
+   "name": "Credstick",
+   "kind": "item",
+   "sprite": "💳",
+   "credits": 20,
+   "dialogue": []
+  },
+  {
+   "id": "wrench",
+   "name": "Pipe wrench",
+   "kind": "item",
+   "sprite": "🔧",
+   "attackBonus": 3,
+   "dialogue": [
+    {
+     "id": "start",
+     "text": "A heavy pipe wrench, still wet. That'll do.",
+     "choices": []
+    }
+   ]
+  }
+ ],
+ "placements": [
+  {
+   "x": 10,
+   "y": 5,
+   "actor": "juno"
+  },
+  {
+   "x": 23,
+   "y": 4,
+   "actor": "razor"
+  },
+  {
+   "x": 21,
+   "y": 5,
+   "actor": "vendor"
+  },
+  {
+   "x": 2,
+   "y": 1,
+   "actor": "terminal"
+  },
+  {
+   "x": 13,
+   "y": 10,
+   "actor": "holo"
+  },
+  {
+   "x": 5,
+   "y": 20,
+   "actor": "wrench"
+  },
+  {
+   "x": 15,
+   "y": 12,
+   "actor": "creds"
+  },
+  {
+   "x": 28,
+   "y": 8,
+   "actor": "jackal"
+  },
+  {
+   "x": 24,
+   "y": 22,
+   "actor": "drone"
+  }
+ ],
+ "spawnChance": 0.6,
+ "randomPool": [
+  {
+   "actor": "drone",
+   "weight": 3
+  },
+  {
+   "actor": "jackal",
+   "weight": 2
+  },
+  {
+   "actor": "creds",
+   "weight": 3
+  },
+  {
+   "actor": "stim",
+   "weight": 1
+  }
+ ]
+}

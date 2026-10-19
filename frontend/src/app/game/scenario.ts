@@ -1,31 +1,25 @@
-import { LevelData } from '../core/models';
-import { Rng, createRng } from './rng';
+import { ActorDef, LevelData } from '../core/models';
+import { createRng } from './rng';
 
 export type Dir = 0 | 1 | 2 | 3; // N, E, S, W
 export const DX = [0, 1, 0, -1] as const;
 export const DY = [-1, 0, 1, 0] as const;
 
-export interface MonsterType {
-  name: string;
-  icon: string;
+export const key = (x: number, y: number) => `${x},${y}`;
+
+/** An actor living on the map during one run. */
+export interface ActorInstance {
+  uid: number;
+  def: ActorDef;
+  x: number;
+  y: number;
   hp: number;
-  attack: [number, number];
-  gold: [number, number];
+  hostile: boolean;
 }
 
-export const MONSTERS: MonsterType[] = [
-  { name: 'Giant Rat', icon: '🐀', hp: 6, attack: [1, 3], gold: [1, 5] },
-  { name: 'Cave Spider', icon: '🕷️', hp: 9, attack: [2, 4], gold: [3, 8] },
-  { name: 'Skeleton', icon: '💀', hp: 14, attack: [2, 6], gold: [5, 15] },
-  { name: 'Ogre', icon: '👹', hp: 24, attack: [4, 9], gold: [15, 40] },
-];
+export const isBlocking = (a: ActorInstance) => a.def.kind !== 'item' && a.def.kind !== 'trigger';
 
-export type Encounter =
-  | { kind: 'monster'; type: MonsterType; hp: number }
-  | { kind: 'treasure'; gold: number; potion: boolean }
-  | { kind: 'trap'; damage: number; revealed: boolean };
-
-/** A concrete, randomized playthrough generated from level data + seed. */
+/** A concrete playthrough generated from level data + seed. */
 export interface Scenario {
   seed: number;
   width: number;
@@ -33,23 +27,29 @@ export interface Scenario {
   walls: boolean[][];
   exit: { x: number; y: number };
   start: { x: number; y: number; dir: Dir };
-  encounters: Map<string, Encounter>;
+  actors: Map<string, ActorInstance>;
 }
-
-export const key = (x: number, y: number) => `${x},${y}`;
 
 /**
  * Turns an editor level into one playthrough:
  *  - one of the 'S' cells becomes the start, one of the 'E' cells the real exit
- *  - each '?' rolls against spawnChance and the weighted encounter table
- *  - 'M' and 'T' always spawn, but their exact monster/loot is rolled
+ *  - placed actors always appear
+ *  - each '?' rolls against spawnChance, then picks from the weighted random pool
  */
 export function buildScenario(level: LevelData, seed: number): Scenario {
   const rng = createRng(seed);
+  const defs = new Map(level.actors.map((a) => [a.id, a]));
   const starts: [number, number][] = [];
   const exits: [number, number][] = [];
+  const randoms: [number, number][] = [];
   const walls: boolean[][] = [];
-  const encounters = new Map<string, Encounter>();
+  const actors = new Map<string, ActorInstance>();
+  let uid = 0;
+
+  const spawn = (def: ActorDef | undefined, x: number, y: number) => {
+    if (!def) return;
+    actors.set(key(x, y), { uid: uid++, def, x, y, hp: def.hp ?? 1, hostile: !!def.hostile });
+  };
 
   for (let y = 0; y < level.height; y++) {
     walls.push([]);
@@ -58,24 +58,24 @@ export function buildScenario(level: LevelData, seed: number): Scenario {
       walls[y].push(c === '#');
       if (c === 'S') starts.push([x, y]);
       else if (c === 'E') exits.push([x, y]);
-      else if (c === 'M') encounters.set(key(x, y), rollMonster(rng));
-      else if (c === 'T') encounters.set(key(x, y), rollTreasure(rng));
-      else if (c === '?' && rng.next() < level.scenario.spawnChance) {
-        const kind = rng.weighted(level.scenario.weights);
-        if (kind === 'monster') encounters.set(key(x, y), rollMonster(rng));
-        if (kind === 'treasure') encounters.set(key(x, y), rollTreasure(rng));
-        if (kind === 'trap') encounters.set(key(x, y), { kind: 'trap', damage: rng.int(2, 6), revealed: false });
-      }
+      else if (c === '?') randoms.push([x, y]);
     }
+  }
+
+  for (const p of level.placements) spawn(defs.get(p.actor), p.x, p.y);
+
+  const pool = Object.fromEntries(level.randomPool.map((r, i) => [i, r.weight])) as Record<string, number>;
+  for (const [x, y] of randoms) {
+    if (actors.has(key(x, y)) || rng.next() >= level.spawnChance) continue;
+    const pick = rng.weighted(pool);
+    if (pick !== null) spawn(defs.get(level.randomPool[Number(pick)].actor), x, y);
   }
 
   const [sx, sy] = rng.pick(starts);
   const [ex, ey] = rng.pick(exits);
   const isOpen = (x: number, y: number) => !(walls[y]?.[x] ?? true);
-  // Face an open corridor if there is one.
   const openDirs = ([0, 1, 2, 3] as Dir[]).filter((d) => isOpen(sx + DX[d], sy + DY[d]));
-  const dir = openDirs.length ? rng.pick(openDirs) : 0;
-  encounters.delete(key(sx, sy));
+  actors.delete(key(sx, sy));
 
   return {
     seed,
@@ -83,16 +83,7 @@ export function buildScenario(level: LevelData, seed: number): Scenario {
     height: level.height,
     walls,
     exit: { x: ex, y: ey },
-    start: { x: sx, y: sy, dir },
-    encounters,
+    start: { x: sx, y: sy, dir: openDirs.length ? rng.pick(openDirs) : 0 },
+    actors,
   };
-}
-
-function rollMonster(rng: Rng): Encounter {
-  const type = rng.pick(MONSTERS);
-  return { kind: 'monster', type, hp: type.hp };
-}
-
-function rollTreasure(rng: Rng): Encounter {
-  return { kind: 'treasure', gold: rng.int(5, 30), potion: rng.next() < 0.35 };
 }

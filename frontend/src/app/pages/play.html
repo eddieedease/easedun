@@ -1,33 +1,46 @@
 @if (level.isLoading()) {
-  <p class="page">Opening the dungeon gate…</p>
+  <p class="page">Booting up…</p>
 } @else if (level.error()) {
   <p class="page error">{{ message(level.error()) }}</p>
 } @else if (engine(); as game) {
   <div class="layout">
-    <section class="panel inventory">
+    <section class="panel status">
       <div class="panel-title">{{ level.value()?.name }}</div>
+      <div class="hp">
+        <span>HP</span>
+        <div class="bar"><span [style.width]="percent(game.hp(), game.maxHp)"></span></div>
+        <span>{{ game.hp() }}/{{ game.maxHp }}</span>
+      </div>
       <dl class="stats">
-        <dt>💰 Gold</dt><dd>{{ game.gold() }}</dd>
-        <dt>🧪 Potions</dt><dd>{{ game.potions() }}</dd>
-        <dt>👣 Steps</dt><dd>{{ game.steps() }}</dd>
+        <dt>¢ Credits</dt><dd>{{ game.credits() }}</dd>
+        <dt>⚡ Attack</dt><dd>{{ game.attackPower()[0] }}–{{ game.attackPower()[1] }}</dd>
         <dt>🎲 Seed</dt><dd>{{ game.scenario.seed }}</dd>
       </dl>
-      <div class="slots" aria-label="Inventory (placeholder)">
-        @for (slot of [1, 2, 3, 4, 5, 6, 7, 8]; track slot) {
+      <div class="panel-title sub">Inventory</div>
+      <div class="slots">
+        @for (item of game.inventory(); track $index) {
+          <button class="slot" (click)="game.useItem($index)"
+                  [title]="item.name + (item.heal ? ' — use to heal ' + item.heal : item.attackBonus ? ' — +' + item.attackBonus + ' attack' : '')">
+            {{ item.sprite }}<small>{{ $index + 1 }}</small>
+          </button>
+        }
+        @for (empty of emptySlots(); track $index) {
           <span class="slot"></span>
         }
       </div>
-      <button class="btn" (click)="game.drinkPotion()" [disabled]="game.potions() < 1">Drink potion (H)</button>
     </section>
 
     <section class="view">
-      <app-dungeon-view [engine]="game" />
+      <app-city-view [engine]="game" (settled)="onSettled()" />
+      @if (game.dialogue(); as d) {
+        <app-dialogue-box class="dialogue" [view]="d" (choose)="game.choose($event)" />
+      }
       @if (game.status() !== 'playing') {
         <div class="overlay">
-          <h2>{{ game.status() === 'won' ? 'Victory!' : 'Defeat' }}</h2>
-          <p>{{ game.log().at(-1) }}</p>
+          <h2 [class.lost]="game.status() === 'lost'">{{ game.status() === 'won' ? 'District cleared' : 'Flatlined' }}</h2>
+          <p>{{ game.status() === 'won' ? (game.level.story.outro || game.log().at(-1)) : game.log().at(-1) }}</p>
           <div class="overlay-actions">
-            <button class="btn primary" (click)="restart(false)">New scenario</button>
+            <button class="btn primary" (click)="restart(false)">New run</button>
             <button class="btn" (click)="restart(true)">Retry same seed</button>
             <a class="btn" routerLink="/">Leave</a>
           </div>
@@ -35,17 +48,31 @@
       }
     </section>
 
-    <section class="panel party">
-      <div class="panel-title">Party</div>
-      @for (hero of game.party(); track hero.name) {
-        <div class="hero" [class.dead]="hero.hp === 0">
-          <span class="portrait">{{ hero.hp === 0 ? '🪦' : hero.icon }}</span>
-          <div class="hero-info">
-            <div>{{ hero.name }} <small>{{ hero.cls }}</small></div>
-            <div class="bar"><span [style.width]="hpPercent(hero.hp, hero.maxHp)"></span></div>
-            <small>{{ hero.hp }} / {{ hero.maxHp }}</small>
+    <section class="panel contact">
+      <div class="panel-title">Contact</div>
+      @if (game.facing(); as target) {
+        <div class="target">
+          <span class="big">{{ target.def.sprite }}</span>
+          <div>
+            <div class="target-name">{{ target.def.name }}</div>
+            <small [class.hostile]="target.hostile">{{ target.hostile ? 'Hostile' : kindLabels[target.def.kind] }}</small>
+            @if (target.def.kind === 'enemy') {
+              <div class="bar enemy"><span [style.width]="percent(target.hp, target.def.hp ?? 1)"></span></div>
+            }
           </div>
         </div>
+        <div class="target-actions">
+          <button class="btn" (click)="command('talk')">{{ target.hostile ? 'Engage' : 'Talk' }} <kbd>F</kbd></button>
+          @if (target.def.kind === 'enemy') {
+            <button class="btn pink" (click)="command('attack')">Attack <kbd>X</kbd></button>
+          }
+        </div>
+      } @else {
+        <p class="muted">Nobody in front of you. Walk up to someone and press <kbd>F</kbd> to talk.</p>
+      }
+      @if (game.level.story.intro) {
+        <div class="panel-title sub">Briefing</div>
+        <p class="briefing">{{ game.level.story.intro }}</p>
       }
     </section>
 
@@ -55,24 +82,25 @@
     </section>
 
     <section class="panel log" aria-live="polite">
-      <div class="panel-title">Log</div>
+      <div class="panel-title">Feed</div>
       @for (line of lastLog(); track $index; let last = $last) {
-        <p [class.latest]="last">{{ line }}</p>
+        <p [class.latest]="last">&gt; {{ line }}</p>
       }
     </section>
 
     <section class="panel controls" aria-label="Movement controls">
       <div class="pad">
-        <button class="btn" (click)="game.turn(-1)" title="Turn left (Q / ←)">↺</button>
-        <button class="btn" (click)="game.move(0)" title="Forward (W / ↑)">▲</button>
-        <button class="btn" (click)="game.turn(1)" title="Turn right (E / →)">↻</button>
-        <button class="btn" (click)="game.move(3)" title="Strafe left (A)">◀</button>
-        <button class="btn" (click)="game.move(2)" title="Back (S / ↓)">▼</button>
-        <button class="btn" (click)="game.move(1)" title="Strafe right (D)">▶</button>
+        <button class="btn" (click)="command('turnLeft')" title="Turn left (Q / ←)">↺</button>
+        <button class="btn" (click)="command('forward')" title="Forward (W / ↑)">▲</button>
+        <button class="btn" (click)="command('turnRight')" title="Turn right (E / →)">↻</button>
+        <button class="btn" (click)="command('strafeLeft')" title="Strafe left (A)">◀</button>
+        <button class="btn" (click)="command('back')" title="Back (S / ↓)">▼</button>
+        <button class="btn" (click)="command('strafeRight')" title="Strafe right (D)">▶</button>
       </div>
       <div class="meta">
-        <button class="btn" (click)="restart(false)" title="New random scenario">🎲</button>
-        <a class="btn" routerLink="/" title="Back to level select">🚪</a>
+        <button class="btn" (click)="command('talk')" title="Talk / use (F or Space)">💬</button>
+        <button class="btn pink" (click)="command('attack')" title="Attack (X)">⚔</button>
+        <button class="btn" (click)="restart(false)" title="New random run">🎲</button>
         @if (auth.adminView()) {
           <a class="btn" [routerLink]="['/admin/levels', id()]" title="Edit this level">🛠</a>
         }

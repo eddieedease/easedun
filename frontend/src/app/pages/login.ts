@@ -10,7 +10,7 @@ import { Auth } from '../core/auth';
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <main class="panel">
-      <h1>⚔ Dungeon Crawler</h1>
+      <h1>NEON//STREETS</h1>
       @if (!auth.installed()) {
         <p>The game is not installed yet.</p>
         <a class="btn primary" href="install/">Run the installer</a>
@@ -23,7 +23,7 @@ import { Auth } from '../core/auth';
           @if (error()) {
             <p class="error">{{ error() }}</p>
           }
-          <button class="btn primary" type="submit" [disabled]="busy()">Enter the dungeon</button>
+          <button class="btn primary" type="submit" [disabled]="busy()">Jack in</button>
         </form>
       }
     </main>

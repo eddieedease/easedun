@@ -1,120 +1,147 @@
-// Desktop: classic crawler blocks around the 3D view.
+// Desktop: HUD blocks around the street view.
 // Mobile: blocks stack with the view and controls first.
 .layout {
   display: grid;
   gap: 8px;
   padding: 8px;
-  max-width: 1280px;
+  max-width: 1320px;
   margin: 0 auto;
-  grid-template-columns: 220px minmax(0, 1fr) 240px;
+  grid-template-columns: 230px minmax(0, 1fr) 250px;
   grid-template-areas:
-    'inventory view party'
-    'map       log  controls';
+    'status view contact'
+    'map    log  controls';
 }
 
-.inventory { grid-area: inventory; }
-.view { grid-area: view; position: relative; border: 3px solid var(--edge); box-shadow: 0 0 0 2px #000; align-self: start; }
-.party { grid-area: party; }
+.status { grid-area: status; }
+.view {
+  grid-area: view;
+  position: relative;
+  align-self: start;
+  border: 1px solid var(--neon-cyan);
+  box-shadow: 0 0 18px rgba(0, 240, 255, 0.25), 0 0 0 1px #000;
+  overflow: hidden;
+}
+.contact { grid-area: contact; }
 .map { grid-area: map; }
 .log { grid-area: log; }
 .controls { grid-area: controls; }
 
-@media (max-width: 860px) {
+@media (max-width: 900px) {
   .layout {
     grid-template-columns: 1fr 1fr;
     grid-template-areas:
-      'view      view'
-      'controls  map'
-      'log       log'
-      'party     party'
-      'inventory inventory';
+      'view     view'
+      'controls map'
+      'contact  contact'
+      'log      log'
+      'status   status';
   }
 }
 
-@media (max-width: 480px) {
+@media (max-width: 520px) {
   .layout {
     grid-template-columns: 1fr;
-    grid-template-areas: 'view' 'controls' 'log' 'map' 'party' 'inventory';
+    grid-template-areas: 'view' 'controls' 'contact' 'log' 'map' 'status';
   }
-  .map app-automap { max-width: 260px; margin: 0 auto; }
+  .map app-automap { max-width: 280px; margin: 0 auto; }
+}
+
+.dialogue {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  max-height: 75%;
+  display: flex;
+  flex-direction: column;
+}
+
+@media (max-width: 520px) {
+  // On phones the box is too big to overlay the view; let it flow below instead.
+  .dialogue { position: static; max-height: none; }
+}
+
+.hp {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: 8px;
+  align-items: center;
+  margin-bottom: 8px;
+  color: var(--good);
+}
+
+.bar {
+  height: 8px;
+  background: rgba(255, 43, 106, 0.2);
+  border: 1px solid rgba(61, 255, 162, 0.4);
+  span { display: block; height: 100%; background: var(--good); box-shadow: 0 0 8px var(--good); transition: width .25s; }
+  &.enemy { border-color: rgba(255, 43, 106, 0.5); margin-top: 4px; }
+  &.enemy span { background: var(--danger); box-shadow: 0 0 8px var(--danger); }
 }
 
 .stats {
   display: grid;
   grid-template-columns: auto 1fr;
   gap: 2px 12px;
-  margin: 0 0 10px;
-  dd { margin: 0; text-align: right; color: var(--accent); }
+  margin: 0 0 12px;
+  dt { color: var(--muted); }
+  dd { margin: 0; text-align: right; color: var(--neon-yellow); }
 }
+
+.panel-title.sub { margin: 8px -10px 8px; }
 
 .slots {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
   gap: 4px;
-  margin-bottom: 10px;
 }
 
 .slot {
+  position: relative;
   aspect-ratio: 1;
-  background: var(--panel-dark);
-  border: 2px solid var(--edge);
-  box-shadow: inset 2px 2px 0 #000;
-}
-
-.hero {
-  display: flex;
-  gap: 8px;
-  align-items: center;
-  padding: 4px 0;
-  border-bottom: 1px solid var(--edge);
-  &:last-child { border-bottom: 0; }
-  &.dead { opacity: .45; }
-  small { color: var(--muted); }
-}
-
-.portrait {
-  font-size: 28px;
-  width: 44px;
-  height: 44px;
   display: grid;
   place-items: center;
+  font-size: 22px;
   background: var(--panel-dark);
-  border: 2px solid var(--edge);
+  border: 1px solid var(--edge-light);
+  color: inherit;
+  padding: 0;
+  small { position: absolute; right: 2px; bottom: 0; font-size: 10px; color: var(--muted); }
 }
+button.slot { cursor: pointer; }
+button.slot:hover { border-color: var(--neon-cyan); box-shadow: 0 0 8px rgba(0, 240, 255, 0.4); }
 
-.hero-info { flex: 1; min-width: 0; line-height: 1.1; }
-
-.bar {
-  height: 6px;
-  background: #3a1715;
-  margin: 3px 0;
-  span { display: block; height: 100%; background: var(--good); transition: width .2s; }
-}
+.target { display: flex; gap: 10px; align-items: center; margin-bottom: 8px; }
+.big { font-size: 40px; filter: drop-shadow(0 0 6px rgba(255, 43, 214, 0.6)); }
+.target-name { color: var(--text); }
+.target small { color: var(--muted); }
+.target small.hostile { color: var(--danger); }
+.target-actions { display: flex; gap: 6px; flex-wrap: wrap; .btn { flex: 1; } }
+kbd { font: inherit; font-size: .75em; color: var(--muted); border: 1px solid var(--edge-light); padding: 0 4px; }
+.muted { color: var(--muted); margin: 0; font-size: .9em; }
+.briefing { color: var(--muted); font-size: .85em; white-space: pre-line; max-height: 180px; overflow: auto; margin: 0; }
 
 .log {
-  min-height: 140px;
-  font-size: .9em;
+  min-height: 150px;
+  font-size: .85em;
   p { margin: 0; color: var(--muted); }
-  p.latest { color: var(--text); }
+  p.latest { color: var(--neon-cyan); }
 }
 
-.controls {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
+.controls { display: flex; flex-direction: column; gap: 8px; }
 
 .pad {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 6px;
-  .btn { font-size: 1.4em; padding: 8px 0; touch-action: manipulation; }
+  .btn { font-size: 1.3em; padding: 8px 0; touch-action: manipulation; }
 }
 
 .meta {
-  display: flex;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
   gap: 6px;
-  .btn { flex: 1; }
+  .btn { padding: 6px 0; touch-action: manipulation; }
 }
 
 .overlay {
@@ -124,13 +151,10 @@
   place-content: center;
   text-align: center;
   padding: 16px;
-  background: rgba(0, 0, 0, .75);
-  h2 { font-size: 2em; }
+  background: rgba(4, 2, 12, 0.82);
+  h2 { font-size: 1.8rem; }
+  h2.lost { color: var(--danger); text-shadow: 0 0 10px var(--danger); }
+  p { white-space: pre-line; max-width: 520px; }
 }
 
-.overlay-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  justify-content: center;
-}
+.overlay-actions { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; }

@@ -1,78 +1,160 @@
-<div class="page">
+<div class="page wide">
   <div class="head">
-    <h1>{{ id() ? 'Edit level' : 'New level' }}</h1>
-    <a routerLink="/admin">← All levels</a>
+    <h1>{{ id() ? 'Edit district' : 'New district' }}</h1>
+    <input class="title" [(ngModel)]="name" (ngModelChange)="dirty.set(true)" maxlength="100" placeholder="Level name" aria-label="Level name" />
+    <label class="check"><input type="checkbox" [(ngModel)]="published" (ngModelChange)="dirty.set(true)" /> Published</label>
+    <span class="spacer"></span>
+    @if (dirty()) { <span class="unsaved">● unsaved</span> }
+    @if (notice()) { <span class="ok">{{ notice() }}</span> }
+    <button class="btn" (click)="save()" [disabled]="saving() || problems().length > 0">Save</button>
+    <button class="btn primary" (click)="save(true)" [disabled]="saving() || problems().length > 0">Save &amp; playtest</button>
+    <a routerLink="/admin">All levels</a>
   </div>
+  @for (p of problems(); track p) { <p class="error">{{ p }}</p> }
+  @if (error()) { <p class="error">{{ error() }}</p> }
+
+  <nav class="tabs" role="tablist">
+    <button role="tab" [class.active]="tab() === 'map'" [attr.aria-selected]="tab() === 'map'" (click)="tab.set('map')">Map</button>
+    <button role="tab" [class.active]="tab() === 'actors'" [attr.aria-selected]="tab() === 'actors'" (click)="tab.set('actors')">
+      Characters &amp; items <small>{{ data().actors.length }}</small>
+    </button>
+    <button role="tab" [class.active]="tab() === 'story'" [attr.aria-selected]="tab() === 'story'" (click)="tab.set('story')">Story &amp; theme</button>
+  </nav>
 
   @if (loading()) {
     <p>Loading…</p>
   } @else {
-    <div class="editor">
-      <section class="panel side">
-        <div class="panel-title">Details</div>
-        <label for="name">Name</label>
-        <input id="name" [(ngModel)]="name" maxlength="100" />
-        <label for="desc">Description</label>
-        <textarea id="desc" rows="3" [(ngModel)]="description"></textarea>
-        <label class="check"><input type="checkbox" [(ngModel)]="published" /> Published (visible to players)</label>
+    @switch (tab()) {
+      @case ('map') {
+        <div class="map-layout">
+          <aside class="panel side">
+            <div class="panel-title">Paint</div>
+            <div class="tools">
+              @for (t of cellTools; track t.tool) {
+                <button class="btn tool" [class.active]="tool() === t.tool" (click)="selectTool(t.tool)" [title]="t.hint">
+                  <span class="swatch" [style.background]="cellColors[t.tool]">{{ t.tool === '#' || t.tool === '.' ? '' : t.tool }}</span>{{ t.label }}
+                </button>
+              }
+            </div>
 
-        <div class="panel-title spaced">Size</div>
-        <div class="size">
-          <input type="number" min="5" max="64" [(ngModel)]="sizeW" aria-label="Width" />
-          ×
-          <input type="number" min="5" max="64" [(ngModel)]="sizeH" aria-label="Height" />
-          <button class="btn" (click)="resize()">Apply</button>
-        </div>
+            <div class="panel-title sub">Place</div>
+            <div class="tools">
+              <button class="btn tool" [class.active]="tool() === 'erase'" (click)="selectTool('erase')">🧽 Remove</button>
+              <button class="btn tool" [class.active]="tool() === 'pick'" (click)="selectTool('pick')" title="Click something on the map to edit it">🔍 Inspect</button>
+            </div>
+            <div class="actor-picks">
+              @for (a of data().actors; track a.id) {
+                <button class="pick" [class.active]="tool() === 'place' && selectedActor() === a.id" (click)="placeTool(a.id)" [title]="a.name">
+                  <span>{{ a.kind === 'trigger' ? '💬' : a.sprite }}</span>
+                  <small>{{ a.name }}</small>
+                </button>
+              } @empty {
+                <p class="hint">No characters or items yet. Create them in the <a href="" (click)="tab.set('actors'); $event.preventDefault()">Characters &amp; items</a> tab.</p>
+              }
+            </div>
 
-        <div class="panel-title spaced">Scenario randomizer</div>
-        <label for="chance">Chance a "?" spawns something: {{ (data().scenario.spawnChance * 100).toFixed(0) }}%</label>
-        <input id="chance" type="range" min="0" max="1" step="0.05"
-               [ngModel]="data().scenario.spawnChance" (ngModelChange)="setScenario('spawnChance', +$event)" />
-        <div class="weights">
-          <label>Monster <input type="number" min="0" max="20" [ngModel]="data().scenario.weights.monster" (ngModelChange)="setScenario('monster', +$event)" /></label>
-          <label>Treasure <input type="number" min="0" max="20" [ngModel]="data().scenario.weights.treasure" (ngModelChange)="setScenario('treasure', +$event)" /></label>
-          <label>Trap <input type="number" min="0" max="20" [ngModel]="data().scenario.weights.trap" (ngModelChange)="setScenario('trap', +$event)" /></label>
-        </div>
-        <p class="hint">Each run picks one random S as start and one random E as the real exit. More of them means more variety.</p>
-      </section>
+            <div class="panel-title sub">Size</div>
+            <div class="size">
+              <input type="number" min="5" max="128" [(ngModel)]="sizeW" aria-label="Width" /> ×
+              <input type="number" min="5" max="128" [(ngModel)]="sizeH" aria-label="Height" />
+              <button class="btn" (click)="resize()">Apply</button>
+            </div>
+            <div class="size">
+              <button class="btn" (click)="fillAll('#')">Fill with buildings</button>
+              <button class="btn" (click)="fillAll('.')">Clear</button>
+            </div>
 
-      <section class="panel canvas-wrap">
-        <div class="toolbar" role="radiogroup" aria-label="Paint tool">
-          @for (t of tools; track t.cell) {
-            <button class="btn tool" [class.active]="tool() === t.cell" (click)="tool.set(t.cell)" [title]="t.hint"
-                    role="radio" [attr.aria-checked]="tool() === t.cell">
-              <span class="swatch" [attr.data-cell]="t.cell">{{ t.cell === '#' || t.cell === '.' ? '' : t.cell }}</span>{{ t.label }}
-            </button>
-          }
-        </div>
-        <div class="grid" [style.grid-template-columns]="'repeat(' + data().width + ', 1fr)'" (pointerleave)="painting.set(false)">
-          @for (row of data().rows; track y; let y = $index) {
-            @for (c of row; track x; let x = $index) {
-              <div class="cell" [attr.data-cell]="c" (pointerdown)="paint(x, y, true); $event.preventDefault()" (pointerenter)="paint(x, y)">
-                {{ c === '#' || c === '.' ? '' : c }}
-              </div>
+            <div class="panel-title sub">Random spots (?)</div>
+            <label for="chance">Chance a spot spawns something: {{ (data().spawnChance * 100).toFixed(0) }}%</label>
+            <input id="chance" type="range" min="0" max="1" step="0.05" [ngModel]="data().spawnChance" (ngModelChange)="setSpawnChance(+$event)" />
+            <p class="hint">Weight of each actor in the random pool (0 = never):</p>
+            @for (a of data().actors; track a.id) {
+              @if (a.kind !== 'trigger') {
+                <label class="pool">
+                  <span>{{ a.sprite }} {{ a.name }}</span>
+                  <input type="number" min="0" max="50" [ngModel]="poolWeight(a.id)" (ngModelChange)="setPoolWeight(a.id, +$event)" />
+                </label>
+              }
             }
-          }
+          </aside>
+
+          <section class="panel canvas-panel">
+            <app-map-canvas [data]="data()" (paint)="paint($event)" />
+            <p class="hint">
+              Starts {{ counts().S }} · Exits {{ counts().E }} · Random spots {{ counts().R }} · Placed {{ data().placements.length }}
+              — each run picks one random start and one random exit.
+            </p>
+          </section>
         </div>
-        <p class="hint">
-          Starts {{ counts().S }} · Exits {{ counts().E }} · Random {{ counts()['?'] }} · Monsters {{ counts().M }} · Treasure {{ counts().T }}
-        </p>
-        @for (p of problems(); track p) {
-          <p class="error">{{ p }}</p>
-        }
-        @if (error()) {
-          <p class="error">{{ error() }}</p>
-        }
-        @if (notice()) {
-          <p class="ok">{{ notice() }}</p>
-        }
-        <div class="actions">
-          <button class="btn" (click)="clear()">Reset grid</button>
-          <span class="spacer"></span>
-          <button class="btn" (click)="save()" [disabled]="saving() || problems().length > 0">Save</button>
-          <button class="btn primary" (click)="save(true)" [disabled]="saving() || problems().length > 0">Save &amp; playtest</button>
+      }
+
+      @case ('actors') {
+        <div class="actors-layout">
+          <aside class="panel side">
+            <div class="panel-title">Library</div>
+            <div class="add">
+              @for (k of kinds; track k) {
+                <button class="btn mini" (click)="addActor(k)">+ {{ kindLabels[k] }}</button>
+              }
+            </div>
+            @for (k of kinds; track k) {
+              @let group = ofKind(k);
+              @if (group.length) {
+                <h3>{{ kindLabels[k] }}</h3>
+                @for (a of group; track a.id) {
+                  <button class="row" [class.active]="selectedActor() === a.id" (click)="selectedActor.set(a.id)">
+                    <span>{{ a.kind === 'trigger' ? '💬' : a.sprite }}</span>
+                    <span class="grow">{{ a.name }}</span>
+                    <small>{{ placedCount(a.id) }}× on map</small>
+                  </button>
+                }
+              }
+            }
+          </aside>
+          <section class="panel">
+            @if (current(); as actor) {
+              <app-actor-editor [actor]="actor" [actors]="data().actors" (changed)="touch()" (remove)="removeActor(actor.id)" />
+              <button class="btn" (click)="placeTool(actor.id); tab.set('map')">Place on map →</button>
+            } @else {
+              <p class="hint">Pick something from the library, or create a new character, enemy, item, terminal or story trigger.</p>
+            }
+          </section>
         </div>
-      </section>
-    </div>
+      }
+
+      @case ('story') {
+        <div class="story-layout">
+          <section class="panel">
+            <div class="panel-title">Story</div>
+            <label for="desc">Short description (shown in the level list)</label>
+            <textarea id="desc" rows="2" [(ngModel)]="description" (ngModelChange)="dirty.set(true)"></textarea>
+            <label for="intro">Intro / briefing (shown when the run starts)</label>
+            <textarea id="intro" rows="6" [(ngModel)]="data().story.intro" (ngModelChange)="touch()"></textarea>
+            <label for="outro">Outro (shown when the level is completed)</label>
+            <textarea id="outro" rows="4" [(ngModel)]="data().story.outro" (ngModelChange)="touch()"></textarea>
+            <div class="exit">
+              <label>Exit needs flag <input [(ngModel)]="data().story.exitFlag" (ngModelChange)="touch()" placeholder="(none: exit always open)" /></label>
+              <label>Text when exit is locked <input [(ngModel)]="data().story.exitLockedText" (ngModelChange)="touch()" /></label>
+            </div>
+            @if (flags().length) {
+              <p class="hint">Flags used in this level: @for (f of flags(); track f) { <code>{{ f }}</code> }</p>
+            }
+          </section>
+          <section class="panel">
+            <div class="panel-title">Theme</div>
+            <div class="themes">
+              @for (t of themes; track t.id) {
+                <button class="theme" [class.active]="data().theme === t.id" (click)="setTheme(t.id)">
+                  <span class="preview" [style.background]="'linear-gradient(180deg, rgb(' + t.sky[0] + ') 0%, rgb(' + t.sky[1] + ') 55%, rgb(' + t.street + ') 56%)'">
+                    @for (n of t.neon; track $index) { <i [style.background]="'rgb(' + n + ')'"></i> }
+                  </span>
+                  {{ t.label }}
+                </button>
+              }
+            </div>
+          </section>
+        </div>
+      }
+    }
   }
 </div>
