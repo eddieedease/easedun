@@ -193,6 +193,23 @@ export class LevelEditorPage {
     this.dirty.set(true);
   }
 
+  protected encounterWeight(actorId: string) {
+    return this.data().encounterPool.find((r) => r.actor === actorId)?.weight ?? 0;
+  }
+
+  protected setEncounterWeight(actorId: string, weight: number) {
+    const d = this.data();
+    const pool = d.encounterPool.filter((r) => r.actor !== actorId);
+    if (weight > 0) pool.push({ actor: actorId, weight });
+    this.data.set({ ...d, encounterPool: pool });
+    this.dirty.set(true);
+  }
+
+  protected setEncounterRate(value: number) {
+    this.data.update((d) => ({ ...d, encounterRate: value }));
+    this.dirty.set(true);
+  }
+
   protected setSpawnChance(value: number) {
     this.data.update((d) => ({ ...d, spawnChance: value }));
     this.dirty.set(true);
@@ -223,6 +240,7 @@ export class LevelEditorPage {
       actors: d.actors.filter((a) => a.id !== id),
       placements: d.placements.filter((p) => p.actor !== id),
       randomPool: d.randomPool.filter((r) => r.actor !== id),
+      encounterPool: d.encounterPool.filter((r) => r.actor !== id),
     }));
     this.selectedActor.set(null);
     this.dirty.set(true);

@@ -404,5 +404,16 @@
    "actor": "stim",
    "weight": 1
   }
+ ],
+ "encounterRate": 0.06,
+ "encounterPool": [
+  {
+   "actor": "drone",
+   "weight": 3
+  },
+  {
+   "actor": "jackal",
+   "weight": 2
+  }
  ]
 }

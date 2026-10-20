@@ -106,6 +106,9 @@ export interface LevelData {
   /** Chance (0–1) that a '?' cell spawns something from the random pool. */
   spawnChance: number;
   randomPool: { actor: string; weight: number }[];
+  /** Chance (0–1) per step on the street that an enemy from the encounter pool jumps the player. */
+  encounterRate: number;
+  encounterPool: { actor: string; weight: number }[];
 }
 
 export interface LevelSummary {

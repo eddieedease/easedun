@@ -91,6 +91,8 @@ Each run is generated from the level and a **seed** (shown in game; replay one w
 - one random `S` becomes the start, and one random `E` becomes the real exit
 - placed actors always appear
 - each `?` rolls against the level's *spawn chance*, then picks an actor from the weighted random pool
+- **street encounters**: each step on the street has a chance (the level's *encounter rate*) that an enemy from
+  the *encounter pool* jumps the player, like tall grass in old RPGs. A few safe steps follow every battle.
 
 Levels from the first (dungeon) version are converted automatically when opened.
 

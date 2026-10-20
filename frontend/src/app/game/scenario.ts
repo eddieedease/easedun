@@ -17,6 +17,8 @@ export interface ActorInstance {
   hostile: boolean;
   /** performance.now() timestamp until which the sprite flashes after a hit. */
   flashUntil?: number;
+  /** Set once the actor has left the map (defeated, picked up, talked away). */
+  removed?: boolean;
 }
 
 export const isBlocking = (a: ActorInstance) => a.def.kind !== 'item' && a.def.kind !== 'trigger';

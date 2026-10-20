@@ -67,13 +67,16 @@ function validate_level_data(mixed $data): array
         }
     }
 
-    $pool = [];
-    foreach (is_array($data['randomPool'] ?? null) ? $data['randomPool'] : [] as $r) {
-        $weight = max(0, min(100, (int)($r['weight'] ?? 0)));
-        if ($weight > 0 && isset($actors[$r['actor'] ?? ''])) {
-            $pool[] = ['actor' => $r['actor'], 'weight' => $weight];
+    $weighted = function (mixed $list) use ($actors): array {
+        $pool = [];
+        foreach (is_array($list) ? $list : [] as $r) {
+            $weight = max(0, min(100, (int)($r['weight'] ?? 0)));
+            if ($weight > 0 && isset($actors[$r['actor'] ?? ''])) {
+                $pool[] = ['actor' => $r['actor'], 'weight' => $weight];
+            }
         }
-    }
+        return $pool;
+    };
 
     $story = is_array($data['story'] ?? null) ? $data['story'] : [];
     $text = fn(string $key, int $max) => mb_substr((string)($story[$key] ?? ''), 0, $max);
@@ -92,7 +95,9 @@ function validate_level_data(mixed $data): array
         'actors' => array_values($actors),
         'placements' => $placements,
         'spawnChance' => max(0.0, min(1.0, (float)($data['spawnChance'] ?? 0.5))),
-        'randomPool' => $pool,
+        'randomPool' => $weighted($data['randomPool'] ?? null),
+        'encounterRate' => max(0.0, min(0.5, (float)($data['encounterRate'] ?? 0))),
+        'encounterPool' => $weighted($data['encounterPool'] ?? null),
     ];
 }
 

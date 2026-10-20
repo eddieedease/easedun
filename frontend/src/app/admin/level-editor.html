@@ -76,6 +76,19 @@
                 </label>
               }
             }
+
+            <div class="panel-title sub">Street encounters</div>
+            <label for="encounter">Chance per step that an enemy jumps you: {{ (data().encounterRate * 100).toFixed(0) }}%</label>
+            <input id="encounter" type="range" min="0" max="0.3" step="0.01" [ngModel]="data().encounterRate" (ngModelChange)="setEncounterRate(+$event)" />
+            <p class="hint">Like tall grass: enemies appear out of nowhere while walking, so streets never stay empty. A few safe steps follow every fight. Weights (0 = never):</p>
+            @for (a of ofKind('enemy'); track a.id) {
+              <label class="pool">
+                <span>{{ a.sprite }} {{ a.name }}</span>
+                <input type="number" min="0" max="50" [ngModel]="encounterWeight(a.id)" (ngModelChange)="setEncounterWeight(a.id, +$event)" />
+              </label>
+            } @empty {
+              <p class="hint">Create enemies first.</p>
+            }
           </aside>
 
           <section class="panel canvas-panel">

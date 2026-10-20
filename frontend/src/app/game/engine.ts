@@ -57,6 +57,8 @@ const COUNTER_MS = 450;
 const RECOVER_MS = 300;
 const VICTORY_MS = 1100;
 const FLEE_MS = 450;
+/** Steps after any battle before a street encounter can happen again. */
+const ENCOUNTER_GRACE = 5;
 
 /** All state of a single run. UI components read its signals. */
 export class GameEngine {
@@ -85,6 +87,8 @@ export class GameEngine {
   /** A dialogue "fight" effect outside battle starts one once the conversation closes. */
   private pendingBattle: ActorInstance | null = null;
   private fxSeq = 0;
+  private stepsSinceBattle = 0;
+  private encounterUid = 0;
 
   /** The visible actor directly in front of the player, if any. */
   readonly facing = computed(() => {
@@ -156,6 +160,7 @@ export class GameEngine {
     this.pos.set({ ...p, x: nx, y: ny });
     this.explore();
     this.enterCell(nx, ny);
+    this.rollEncounter(nx, ny);
     return 'moved';
   }
 
@@ -249,7 +254,24 @@ export class GameEngine {
     return b && b.phase === 'menu' && !this.dialogue() && this.status() === 'playing' ? b : null;
   }
 
+  /** Street encounters: each step may summon an enemy from the level's encounter pool. */
+  private rollEncounter(x: number, y: number) {
+    this.stepsSinceBattle++;
+    const { encounterRate, encounterPool } = this.level;
+    const { exit } = this.scenario;
+    if (!encounterRate || !encounterPool.length || this.busy || this.stepsSinceBattle <= ENCOUNTER_GRACE) return;
+    if (x === exit.x && y === exit.y) return;
+    if (this.rng.next() >= encounterRate) return;
+    const pick = this.rng.weighted(Object.fromEntries(encounterPool.map((p, i) => [i, p.weight])) as Record<string, number>);
+    const def = pick === null ? undefined : this.defs.get(encounterPool[Number(pick)].actor);
+    if (!def) return;
+    // Encounter enemies live off the map: they appear, fight, and are gone.
+    const enemy: ActorInstance = { uid: -++this.encounterUid, def, x: -1, y: -1, hp: def.hp ?? 1, hostile: true };
+    this.startBattle(enemy, true);
+  }
+
   private startBattle(enemy: ActorInstance, ambush: boolean) {
+    this.stepsSinceBattle = 0;
     enemy.hostile = true;
     this.battle.set({ enemy, phase: 'intro', ambush });
     this.emit('encounter');
@@ -314,7 +336,7 @@ export class GameEngine {
     const pending = this.pendingBattle;
     this.pendingBattle = null;
     const b = this.battle();
-    if (b && actor === b.enemy && !this.scenario.actors.has(key(actor.x, actor.y))) {
+    if (b && actor === b.enemy && actor.removed) {
       this.say(`${actor.def.name} backs off.`, 'combat');
       this.setPhase('fled');
       this.later(() => this.battle.set(null), FLEE_MS);
@@ -496,7 +518,8 @@ export class GameEngine {
   }
 
   private removeActor(actor: ActorInstance) {
-    this.scenario.actors.delete(key(actor.x, actor.y));
+    actor.removed = true;
+    if (this.scenario.actors.get(key(actor.x, actor.y)) === actor) this.scenario.actors.delete(key(actor.x, actor.y));
     this.worldVersion.update((v) => v + 1);
   }
 

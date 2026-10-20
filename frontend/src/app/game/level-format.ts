@@ -43,6 +43,8 @@ export function emptyLevel(width = 20, height = 16): LevelData {
     placements: [],
     spawnChance: 0.5,
     randomPool: [],
+    encounterRate: 0,
+    encounterPool: [],
   };
 }
 
