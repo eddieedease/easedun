@@ -98,7 +98,8 @@ export class CityView {
   }
 
   private reset(engine: GameEngine) {
-    this.renderer = new CityRenderer(THEMES[engine.level.theme], engine.scenario.seed);
+    const sc = engine.scenario;
+    this.renderer = new CityRenderer(THEMES[engine.level.theme], sc.seed, sc.walls, sc.width, sc.height);
     const p = engine.pos();
     this.target = { x: p.x + 0.5, y: p.y + 0.5, angle: dirAngle(p.dir) };
     this.cam = { ...this.target, bob: 0 };

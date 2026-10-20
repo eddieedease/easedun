@@ -1,5 +1,6 @@
 import { ActorInstance, isHidden } from './scenario';
-import { TEX_H, TEX_W, Texture, WALL_H, buildingTextures, pack, skyline } from './textures';
+import { City, TEX_W, buildCity, faceColumn, sampleFacade } from './city';
+import { pack, skyline } from './textures';
 import { Theme } from './themes';
 
 export const VIEW_W = 480;
@@ -40,16 +41,28 @@ export class CityRenderer {
   private readonly image: ImageData;
   private readonly buf: Uint32Array;
   private readonly zbuf = new Float32Array(VIEW_W);
-  private readonly textures: Texture[];
+  private readonly city: City;
+  private readonly glowOut = new Uint8Array(1);
+  private readonly wallGrid: Uint8Array;
+  private readonly gridW: number;
+  private readonly gridH: number;
+  private readonly puddles = makePuddles();
+  /** First screen row of street per column (rows above are sky or buildings). */
+  private readonly floorStart = new Int16Array(VIEW_W);
+  private time = 0;
   private readonly skyline: Float32Array;
   private readonly fogPacked: number;
   private readonly rain: Drop[] = [];
   private lastTime = 0;
 
-  constructor(private readonly theme: Theme, seed: number) {
+  constructor(private readonly theme: Theme, seed: number, walls: boolean[][], width: number, height: number) {
     this.image = new ImageData(VIEW_W, VIEW_H);
     this.buf = new Uint32Array(this.image.data.buffer);
-    this.textures = buildingTextures(theme, seed);
+    this.city = buildCity(walls, width, height, theme, seed);
+    this.gridW = width;
+    this.gridH = height;
+    this.wallGrid = new Uint8Array(width * height);
+    for (let y = 0; y < height; y++) for (let x = 0; x < width; x++) this.wallGrid[y * width + x] = walls[y][x] ? 1 : 0;
     this.skyline = skyline(seed);
     this.fogPacked = pack(...theme.fog);
     for (let i = 0; i < theme.rain; i++) this.rain.push(this.newDrop(true));
@@ -61,10 +74,11 @@ export class CityRenderer {
     const planeX = -dirY * PLANE;
     const planeY = dirX * PLANE;
     const horizon = Math.round(VIEW_H / 2 + cam.bob);
+    this.time = time;
 
     this.drawSky(cam.angle, horizon);
-    this.drawFloor(world, cam, dirX, dirY, planeX, planeY, horizon);
     this.drawWalls(world, cam, dirX, dirY, planeX, planeY, horizon);
+    this.drawFloor(cam, dirX, dirY, planeX, planeY, horizon);
     this.drawSprites(world, cam, dirX, dirY, planeX, planeY, horizon);
 
     ctx.putImageData(this.image, 0, 0);
@@ -100,14 +114,21 @@ export class CityRenderer {
     }
   }
 
-  private drawFloor(world: WorldView, cam: Camera, dirX: number, dirY: number, planeX: number, planeY: number, horizon: number) {
-    const { street, sidewalk, neon } = this.theme;
+  /** Street and sidewalks, drawn only below each column's nearest building. */
+  private drawFloor(cam: Camera, dirX: number, dirY: number, planeX: number, planeY: number, horizon: number) {
+    const { street, sidewalk, neon, fog: fogColor } = this.theme;
+    const [sr, sg, sb] = street;
+    const [wr, wg, wb] = sidewalk;
+    const pr = neon[0][0] * 0.18;
+    const pg = neon[0][1] * 0.18;
+    const pb = neon[0][2] * 0.18;
+    const [fr, fg, fb] = fogColor;
     const rayX0 = dirX - planeX;
     const rayY0 = dirY - planeY;
     const rayX1 = dirX + planeX;
     const rayY1 = dirY + planeY;
-    const isWall = (x: number, y: number) => world.walls[y]?.[x] ?? true;
-    const puddle = neon[0];
+    const { wallGrid, gridW, gridH, puddles, floorStart } = this;
+    const isWall = (x: number, y: number) => x < 0 || y < 0 || x >= gridW || y >= gridH || wallGrid[y * gridW + x] === 1;
 
     for (let y = Math.max(0, horizon + 1); y < VIEW_H; y++) {
       const rowDist = (EYE * PROJ) / (y - horizon);
@@ -116,7 +137,9 @@ export class CityRenderer {
       const stepY = (rowDist * (rayY1 - rayY0)) / VIEW_W;
       let fx = cam.x + rowDist * rayX0;
       let fy = cam.y + rowDist * rayY0;
+      const row = y * VIEW_W;
       for (let x = 0; x < VIEW_W; x++, fx += stepX, fy += stepY) {
+        if (y < floorStart[x]) continue;
         const cx = Math.floor(fx);
         const cy = Math.floor(fy);
         const u = fx - cx;
@@ -129,30 +152,32 @@ export class CityRenderer {
         const grain = ((Math.floor(fx * 24) * 73856093) ^ (Math.floor(fy * 24) * 19349663)) & 7;
         let r: number, g: number, b: number;
         if (curb) {
-          [r, g, b] = sidewalk;
           // Paving tiles.
-          if ((u * 8) % 1 < 0.08 || (v * 8) % 1 < 0.08) { r *= 0.7; g *= 0.7; b *= 0.7; }
-        } else {
-          [r, g, b] = street;
+          const joint = (u * 8) % 1 < 0.08 || (v * 8) % 1 < 0.08 ? 0.7 : 1;
+          r = wr * joint; g = wg * joint; b = wb * joint;
+        } else if (puddles[((fy * PUDDLE_RES) & PUDDLE_MASK) * PUDDLE_SIZE + ((fx * PUDDLE_RES) & PUDDLE_MASK)]) {
           // Puddles reflecting neon.
-          const wet = Math.sin(fx * 1.7 + Math.sin(fy * 0.9) * 2) * Math.cos(fy * 1.3);
-          if (wet > 0.55) {
-            r += puddle[0] * 0.18; g += puddle[1] * 0.18; b += puddle[2] * 0.18;
-          }
+          r = sr + pr; g = sg + pg; b = sb + pb;
+        } else {
+          r = sr; g = sg; b = sb;
         }
         r += grain; g += grain; b += grain;
-        this.buf[y * VIEW_W + x] = pack(
-          r + (this.theme.fog[0] - r) * fog,
-          g + (this.theme.fog[1] - g) * fog,
-          b + (this.theme.fog[2] - b) * fog,
-        );
+        this.buf[row + x] = pack(r + (fr - r) * fog, g + (fg - g) * fog, b + (fb - b) * fog);
       }
     }
   }
 
+  /**
+   * Casts one ray per column. Rays keep going after the first building so a
+   * taller one behind it can show above its roof; walls are drawn near to far,
+   * each only into the rows still free above the previous one.
+   */
   private drawWalls(world: WorldView, cam: Camera, dirX: number, dirY: number, planeX: number, planeY: number, horizon: number) {
     const maxDist = this.theme.fogDistance * 1.6;
     const [fogR, fogG, fogB] = this.theme.fog;
+    const { cellBuilding, buildings, maxHeight } = this.city;
+    const glow = this.glowOut;
+    const time = this.time;
 
     for (let x = 0; x < VIEW_W; x++) {
       const camX = (2 * x) / VIEW_W - 1;
@@ -167,10 +192,14 @@ export class CityRenderer {
       let sideX = rayX < 0 ? (cam.x - mapX) * deltaX : (mapX + 1 - cam.x) * deltaX;
       let sideY = rayY < 0 ? (cam.y - mapY) * deltaY : (mapY + 1 - cam.y) * deltaY;
       let side = 0;
-      let hit = false;
       let dist = 0;
+      let lastBuilding = -1;
+      /** Rows below this are already covered by a nearer building. */
+      let clip = VIEW_H;
+      this.zbuf[x] = Infinity;
+      this.floorStart[x] = horizon + 1;
 
-      while (dist < maxDist) {
+      while (dist < maxDist && clip > 0) {
         if (sideX < sideY) {
           dist = sideX;
           sideX += deltaX;
@@ -182,43 +211,53 @@ export class CityRenderer {
           mapY += stepY;
           side = 1;
         }
-        const outside = mapX < 0 || mapY < 0 || mapX >= world.width || mapY >= world.height;
-        if (outside || world.walls[mapY][mapX]) {
-          hit = !outside;
-          break;
+        if (mapX < 0 || mapY < 0 || mapX >= world.width || mapY >= world.height) break;
+        const cell = mapY * world.width + mapX;
+        const bi = cellBuilding[cell];
+        if (bi < 0) {
+          lastBuilding = -1;
+          continue;
         }
-      }
-      if (!hit || dist >= maxDist) {
-        this.zbuf[x] = Infinity;
-        continue;
-      }
-      this.zbuf[x] = dist;
+        // Inside the same building: its far faces are hidden.
+        if (bi === lastBuilding) continue;
+        lastBuilding = bi;
+        if (this.zbuf[x] === Infinity) {
+          this.zbuf[x] = dist;
+          this.floorStart[x] = Math.max(horizon + 1, Math.min(VIEW_H, Math.ceil(horizon + (EYE * PROJ) / dist)));
+        }
 
-      let wallX = side === 0 ? cam.y + dist * rayY : cam.x + dist * rayX;
-      wallX -= Math.floor(wallX);
-      let texX = Math.floor(wallX * TEX_W);
-      if ((side === 0 && rayX < 0) || (side === 1 && rayY > 0)) texX = TEX_W - texX - 1;
-      const tex = this.textures[((mapX * 7919) ^ (mapY * 104729) ^ side) % this.textures.length];
-
-      const top = horizon - ((WALL_H - EYE) * PROJ) / dist;
-      const bottom = horizon + (EYE * PROJ) / dist;
-      const y0 = Math.max(0, Math.ceil(top));
-      const y1 = Math.min(VIEW_H, Math.ceil(bottom));
-      const texPerPixel = TEX_H / (bottom - top);
-      const fog = this.fogFactor(dist);
-      const shade = side === 1 ? 0.75 : 1;
-
-      for (let y = y0; y < y1; y++) {
-        const texY = Math.min(TEX_H - 1, Math.floor((y - top) * texPerPixel));
-        const i = texY * TEX_W + texX;
-        const c = tex.pixels[i];
-        const lit = tex.glow[i];
-        const s = lit ? 1 : shade;
-        const f = lit ? fog * 0.45 : fog;
-        const r = (c & 255) * s;
-        const g = ((c >> 8) & 255) * s;
-        const b = ((c >> 16) & 255) * s;
-        this.buf[y * VIEW_W + x] = pack(r + (fogR - r) * f, g + (fogG - g) * f, b + (fogB - b) * f);
+        const b = buildings[bi];
+        const scale = PROJ / dist; // screen pixels per cell
+        const top = horizon - (b.heightPx / TEX_W - EYE) * scale;
+        const bottom = horizon + EYE * scale;
+        const y0 = Math.max(0, Math.ceil(top));
+        const y1 = Math.min(clip, Math.ceil(bottom));
+        if (y1 > y0) {
+          let wallX = side === 0 ? cam.y + dist * rayY : cam.x + dist * rayX;
+          wallX -= Math.floor(wallX);
+          let tx = Math.floor(wallX * TEX_W);
+          if ((side === 0 && rayX < 0) || (side === 1 && rayY > 0)) tx = TEX_W - tx - 1;
+          // Each face of a cell is its own storefront / window column.
+          const face = cell * 4 + (side === 0 ? (stepX > 0 ? 0 : 1) : stepY > 0 ? 2 : 3);
+          const col = faceColumn(b, face, tx);
+          const texelsPerPixel = TEX_W / scale;
+          const fog = this.fogFactor(dist);
+          const shade = side === 1 ? 0.75 : 1;
+          for (let y = y0; y < y1; y++) {
+            const h = (bottom - y) * texelsPerPixel;
+            const c = sampleFacade(b, col, face, tx, h, time, glow);
+            const lit = glow[0];
+            const s = lit ? 1 : shade;
+            const f = lit ? fog * 0.45 : fog;
+            const r = (c & 255) * s;
+            const g = ((c >> 8) & 255) * s;
+            const bl = ((c >> 16) & 255) * s;
+            this.buf[y * VIEW_W + x] = pack(r + (fogR - r) * f, g + (fogG - g) * f, bl + (fogB - bl) * f);
+          }
+          clip = Math.min(clip, y0);
+        }
+        // Nothing further away can rise above the tallest building we could still see.
+        if (horizon - (maxHeight - EYE) * scale >= clip) break;
       }
     }
   }
@@ -312,4 +351,23 @@ function emojiTexture(emoji: string) {
     emojiCache.set(emoji, data);
   }
   return data;
+}
+
+const PUDDLE_SIZE = 128;
+const PUDDLE_MASK = PUDDLE_SIZE - 1;
+/** Puddle texels per cell; the pattern repeats every 4 cells. */
+const PUDDLE_RES = 32;
+
+/** Precomputed puddle mask so the floor pass needs no trig per pixel. */
+function makePuddles() {
+  const mask = new Uint8Array(PUDDLE_SIZE * PUDDLE_SIZE);
+  for (let y = 0; y < PUDDLE_SIZE; y++) {
+    for (let x = 0; x < PUDDLE_SIZE; x++) {
+      const fx = x / PUDDLE_RES;
+      const fy = y / PUDDLE_RES;
+      const wet = Math.sin(fx * Math.PI + Math.sin(fy * Math.PI * 0.5) * 2) * Math.cos(fy * Math.PI * 0.75 + fx);
+      mask[y * PUDDLE_SIZE + x] = wet > 0.55 ? 1 : 0;
+    }
+  }
+  return mask;
 }
