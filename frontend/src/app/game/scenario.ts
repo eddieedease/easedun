@@ -15,9 +15,17 @@ export interface ActorInstance {
   y: number;
   hp: number;
   hostile: boolean;
+  /** performance.now() timestamp until which the sprite flashes after a hit. */
+  flashUntil?: number;
 }
 
 export const isBlocking = (a: ActorInstance) => a.def.kind !== 'item' && a.def.kind !== 'trigger';
+
+/**
+ * Not drawn in the view or on the map: story triggers, and enemies that are
+ * hostile on sight, which lurk unseen and ambush the player old-school style.
+ */
+export const isHidden = (a: ActorInstance) => a.def.kind === 'trigger' || (a.def.kind === 'enemy' && !!a.def.hostile);
 
 /** A concrete playthrough generated from level data + seed. */
 export interface Scenario {

@@ -1,0 +1,54 @@
+@if (battle(); as b) {
+  @let e = b.enemy;
+  <div class="battle" [class.shake]="playerHurt()" [class.fled]="b.phase === 'fled'">
+    <div class="backdrop"></div>
+    @if (playerHurt()) { <div class="red-flash"></div> }
+
+    <div class="enemy-plate" [class.show]="b.phase !== 'intro'">
+      <span class="name">{{ e.def.name }}</span>
+      <div class="bar enemy"><span [style.width]="percent(e.hp, e.def.hp ?? 1)"></span></div>
+      <small>{{ b.phase === 'won' ? 'DEFEATED' : e.hp + ' / ' + (e.def.hp ?? 1) }}</small>
+    </div>
+
+    <div class="foe" [class.enter]="b.phase !== 'intro'" [class.hit]="enemyHit()" [class.down]="b.phase === 'won'">
+      <span class="sprite">{{ e.def.sprite }}</span>
+      <span class="shadow"></span>
+    </div>
+
+    <div class="player-plate" [class.show]="b.phase !== 'intro'" [class.hurt]="playerHurt()">
+      <span class="name">YOU</span>
+      <div class="bar"><span [style.width]="percent(engine().hp(), engine().maxHp)"></span></div>
+      <small>{{ engine().hp() }} / {{ engine().maxHp }}</small>
+    </div>
+
+    @for (f of floaters(); track f.id) {
+      <span class="floater" [class]="f.side + ' ' + f.kind">{{ f.text }}</span>
+    }
+
+    @if (b.phase !== 'intro' && b.phase !== 'won' && b.phase !== 'fled') {
+      <div class="menu" [class.waiting]="!canAct()">
+        @if (menu() === 'main') {
+          <button class="btn pink" (click)="fight()" [disabled]="!canAct()"><kbd>1</kbd> FIGHT</button>
+          <button class="btn" (click)="talk()" [disabled]="!canAct()"><kbd>2</kbd> TALK</button>
+          <button class="btn" (click)="openItems()" [disabled]="!canAct()"><kbd>3</kbd> ITEM</button>
+          <button class="btn" (click)="run()" [disabled]="!canAct()"><kbd>4</kbd> RUN</button>
+        } @else {
+          @for (entry of engine().healingItems(); track entry.index; let i = $index) {
+            <button class="btn" (click)="useItem(i)" [disabled]="!canAct()">
+              <kbd>{{ i + 1 }}</kbd> {{ entry.item.sprite }} {{ entry.item.name }} (+{{ entry.item.heal }})
+            </button>
+          } @empty {
+            <span class="none">No healing items.</span>
+          }
+          <button class="btn" (click)="back()"><kbd>0</kbd> BACK</button>
+        }
+      </div>
+    }
+
+    @if (b.phase === 'intro') {
+      <div class="wipe">
+        <span class="banner" [class.ambush]="b.ambush">{{ b.ambush ? '⚠ AMBUSH' : '⚔ CHALLENGE' }}</span>
+      </div>
+    }
+  </div>
+}

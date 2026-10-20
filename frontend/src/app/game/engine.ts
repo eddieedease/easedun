@@ -1,9 +1,36 @@
 import { computed, signal } from '@angular/core';
 import { ActorDef, Condition, DialogueChoice, DialogueNode, Effect, LevelData } from '../core/models';
 import { createRng } from './rng';
-import { ActorInstance, DX, DY, Dir, Scenario, buildScenario, isBlocking, key } from './scenario';
+import { ActorInstance, DX, DY, Dir, Scenario, buildScenario, isBlocking, isHidden, key } from './scenario';
 
 export type RunStatus = 'playing' | 'won' | 'lost';
+
+export type LogKind = 'info' | 'combat' | 'hurt' | 'loot' | 'story';
+
+export interface LogEntry {
+  text: string;
+  kind: LogKind;
+}
+
+/** Something the UI should react to with sound or animation. `seq` makes repeats distinct. */
+export interface GameFx {
+  seq: number;
+  type: 'encounter' | 'playerHit' | 'enemyHit' | 'enemyDown' | 'playerDown' | 'pickup' | 'heal' | 'fled' | 'fail';
+  amount?: number;
+}
+
+/**
+ * intro: encounter transition is playing · menu: waiting for the player ·
+ * busy: an exchange is playing out · won / fled: wrapping up.
+ */
+export type BattlePhase = 'intro' | 'menu' | 'busy' | 'won' | 'fled';
+
+export interface Battle {
+  enemy: ActorInstance;
+  phase: BattlePhase;
+  /** True for hidden enemies that jumped the player. */
+  ambush: boolean;
+}
 
 /** What the dialogue box shows. */
 export interface DialogueView {
@@ -22,6 +49,14 @@ interface DialogueContext {
 
 const VIEW_DEPTH = 7;
 const BASE_ATTACK: [number, number] = [2, 6];
+const LOG_SIZE = 200;
+const RUN_CHANCE = 0.6;
+// Battle beats (ms). Kept short so fights feel snappy.
+const INTRO_MS = 950;
+const COUNTER_MS = 450;
+const RECOVER_MS = 300;
+const VICTORY_MS = 1100;
+const FLEE_MS = 450;
 
 /** All state of a single run. UI components read its signals. */
 export class GameEngine {
@@ -36,26 +71,39 @@ export class GameEngine {
   readonly inventory = signal<ActorDef[]>([]);
   readonly flags = signal<ReadonlySet<string>>(new Set());
   readonly status = signal<RunStatus>('playing');
-  readonly log = signal<string[]>([]);
+  readonly log = signal<LogEntry[]>([]);
   readonly dialogue = signal<DialogueView | null>(null);
+  readonly battle = signal<Battle | null>(null);
+  /** Latest sound/animation cue for the UI. */
+  readonly fx = signal<GameFx | null>(null);
   /** Bumped whenever actors or explored cells change so canvases know to redraw. */
   readonly worldVersion = signal(0);
   readonly explored = new Set<string>();
   private context: DialogueContext | null = null;
   /** "Only once" choices already picked, per actor instance. */
   private readonly usedChoices = new Map<number, Set<DialogueChoice>>();
+  /** A dialogue "fight" effect outside battle starts one once the conversation closes. */
+  private pendingBattle: ActorInstance | null = null;
+  private fxSeq = 0;
 
-  /** The actor directly in front of the player, if any. */
+  /** The visible actor directly in front of the player, if any. */
   readonly facing = computed(() => {
     this.worldVersion();
     const { x, y, dir } = this.pos();
-    return this.actorAt(x + DX[dir], y + DY[dir]) ?? null;
+    const actor = this.actorAt(x + DX[dir], y + DY[dir]);
+    return actor && !isHidden(actor) ? actor : null;
   });
 
   readonly attackPower = computed(() => {
     const bonus = Math.max(0, ...this.inventory().map((i) => i.attackBonus ?? 0));
     return [BASE_ATTACK[0] + bonus, BASE_ATTACK[1] + bonus] as [number, number];
   });
+
+  readonly healingItems = computed(() =>
+    this.inventory()
+      .map((item, index) => ({ item, index }))
+      .filter((e) => !!e.item.heal),
+  );
 
   constructor(readonly level: LevelData, seed: number) {
     this.scenario = buildScenario(level, seed);
@@ -69,7 +117,7 @@ export class GameEngine {
   }
 
   get busy() {
-    return this.status() !== 'playing' || this.dialogue() !== null;
+    return this.status() !== 'playing' || this.dialogue() !== null || this.battle() !== null;
   }
 
   isWall(x: number, y: number) {
@@ -99,7 +147,9 @@ export class GameEngine {
     }
     const actor = this.actorAt(nx, ny);
     if (actor && isBlocking(actor)) {
-      if (relative === 0) this.engage(actor);
+      // Hidden enemies ambush from any direction.
+      if (isHidden(actor)) this.startBattle(actor, true);
+      else if (relative === 0) this.engage(actor);
       else this.say(`${actor.def.name} is in the way.`);
       return 'actor';
     }
@@ -117,6 +167,7 @@ export class GameEngine {
     else this.say('Nothing here but rain.');
   }
 
+  /** Picks a fight with a visible enemy in front of the player. */
   attack() {
     if (this.busy) return;
     const actor = this.facing();
@@ -124,31 +175,121 @@ export class GameEngine {
       this.say(actor ? `You can't fight ${actor.def.name}.` : 'You swing at empty air.');
       return;
     }
-    actor.hostile = true;
-    this.fightRound(actor);
+    this.startBattle(actor, false);
   }
 
+  /** Uses a healing item outside battle. */
   useItem(index: number) {
     if (this.busy) return;
-    const item = this.inventory()[index];
-    if (!item?.heal) {
-      if (item) this.say(`${item.name}: ${item.attackBonus ? `+${item.attackBonus} attack while carried.` : 'nothing to use it on here.'}`);
-      return;
-    }
-    if (this.hp() === this.maxHp) {
-      this.say('You are already at full health.');
-      return;
-    }
-    this.inventory.update((inv) => inv.filter((_, i) => i !== index));
-    this.changeHp(item.heal);
-    this.say(`You use the ${item.name} (+${item.heal} HP).`);
+    this.consume(index);
   }
+
+  // ---- battle -------------------------------------------------------------
+
+  battleFight() {
+    const b = this.readyBattle();
+    if (!b) return;
+    this.setPhase('busy');
+    const enemy = b.enemy;
+    const dealt = this.rng.int(...this.attackPower());
+    enemy.hp = Math.max(0, enemy.hp - dealt);
+    enemy.flashUntil = performance.now() + 220;
+    this.worldVersion.update((v) => v + 1);
+    this.emit('playerHit', dealt);
+
+    if (enemy.hp > 0) {
+      this.say(`You hit ${enemy.def.name} for ${dealt}.`, 'combat');
+      this.enemyTurn();
+      return;
+    }
+    this.say(`You take down ${enemy.def.name} (${dealt} dmg).`, 'combat');
+    this.later(() => {
+      this.setPhase('won');
+      this.emit('enemyDown');
+      this.removeActor(enemy);
+      for (const drop of enemy.def.drops ?? []) this.gainItem(this.defs.get(drop));
+      if (enemy.def.defeatFlag) this.flags.update((f) => new Set(f).add(enemy.def.defeatFlag!));
+      this.later(() => this.battle.set(null), VICTORY_MS);
+    }, RECOVER_MS);
+  }
+
+  battleTalk() {
+    const b = this.readyBattle();
+    if (!b) return;
+    const node = this.startNode(b.enemy);
+    if (node) this.openNode(b.enemy, node);
+    else this.say(`${b.enemy.def.name} isn't here to talk.`, 'combat');
+  }
+
+  battleItem(index: number) {
+    if (!this.readyBattle()) return;
+    if (!this.consume(index)) return;
+    this.setPhase('busy');
+    this.enemyTurn();
+  }
+
+  battleRun() {
+    const b = this.readyBattle();
+    if (!b) return;
+    this.setPhase('busy');
+    if (this.rng.next() < RUN_CHANCE) {
+      this.say('You slip away into the crowd.', 'combat');
+      this.emit('fled');
+      this.setPhase('fled');
+      this.later(() => this.battle.set(null), FLEE_MS);
+    } else {
+      this.say(`${b.enemy.def.name} cuts you off!`, 'combat');
+      this.emit('fail');
+      this.enemyTurn();
+    }
+  }
+
+  private readyBattle() {
+    const b = this.battle();
+    return b && b.phase === 'menu' && !this.dialogue() && this.status() === 'playing' ? b : null;
+  }
+
+  private startBattle(enemy: ActorInstance, ambush: boolean) {
+    enemy.hostile = true;
+    this.battle.set({ enemy, phase: 'intro', ambush });
+    this.emit('encounter');
+    this.say(ambush ? `${enemy.def.name} jumps out of the shadows!` : `${enemy.def.name} squares up to you!`, 'hurt');
+    this.later(() => this.setPhase('menu'), INTRO_MS);
+  }
+
+  /** The enemy answers after a short beat, then control returns to the menu. */
+  private enemyTurn() {
+    this.later(() => {
+      const b = this.battle();
+      if (!b || this.status() !== 'playing') return;
+      const [lo, hi] = b.enemy.def.attack ?? [1, 3];
+      const hit = this.rng.int(lo, hi);
+      this.say(`${b.enemy.def.name} hits you for ${hit}.`, 'hurt');
+      this.emit('enemyHit', hit);
+      this.changeHp(-hit);
+      if (this.status() === 'playing') this.later(() => this.setPhase('menu'), RECOVER_MS);
+    }, COUNTER_MS);
+  }
+
+  private setPhase(phase: BattlePhase) {
+    this.battle.update((b) => (b ? { ...b, phase } : b));
+  }
+
+  /** Runs a step later unless the run has ended in the meantime. */
+  private later(fn: () => void, ms: number) {
+    setTimeout(() => {
+      if (this.status() === 'playing' || this.status() === 'won') fn();
+    }, ms);
+  }
+
+  // ---- dialogue -----------------------------------------------------------
 
   choose(index: number) {
     const ctx = this.context;
     if (!ctx) return;
     if (ctx.choices === null || ctx.choices.length === 0) {
       this.closeDialogue();
+      this.afterConversation(ctx.actor);
       return;
     }
     const choice = ctx.choices[index];
@@ -160,10 +301,25 @@ export class GameEngine {
     this.closeDialogue(false);
     for (const effect of choice.effects) this.applyEffect(effect, ctx.actor);
     const next = ctx.actor?.def.dialogue.find((n) => n.id === choice.next);
-    if (next && ctx.actor && this.status() === 'playing' && this.dialogue() === null) {
+    if (next && ctx.actor && !this.pendingBattle && this.status() === 'playing' && this.dialogue() === null) {
       this.openNode(ctx.actor, next);
     } else if (this.dialogue() === null) {
       ctx.onClose?.();
+      this.afterConversation(ctx.actor);
+    }
+  }
+
+  /** Starts a fight a conversation asked for, or ends a battle whose enemy was talked away. */
+  private afterConversation(actor: ActorInstance | null) {
+    const pending = this.pendingBattle;
+    this.pendingBattle = null;
+    const b = this.battle();
+    if (b && actor === b.enemy && !this.scenario.actors.has(key(actor.x, actor.y))) {
+      this.say(`${actor.def.name} backs off.`, 'combat');
+      this.setPhase('fled');
+      this.later(() => this.battle.set(null), FLEE_MS);
+    } else if (pending && !b && this.status() === 'playing') {
+      this.startBattle(pending, false);
     }
   }
 
@@ -171,8 +327,7 @@ export class GameEngine {
 
   private engage(actor: ActorInstance) {
     if (actor.def.kind === 'enemy' && (actor.hostile || !this.startNode(actor))) {
-      actor.hostile = true;
-      this.fightRound(actor);
+      this.startBattle(actor, false);
       return;
     }
     const node = this.startNode(actor);
@@ -238,13 +393,13 @@ export class GameEngine {
         const i = inv.findIndex((it) => it.id === e.item);
         if (i >= 0) {
           this.inventory.set(inv.filter((_, j) => j !== i));
-          this.say(`You hand over the ${inv[i].name}.`);
+          this.say(`You hand over the ${inv[i].name}.`, 'loot');
         }
         break;
       }
       case 'credits':
         this.credits.update((c) => Math.max(0, c + e.amount));
-        this.say(e.amount >= 0 ? `+${e.amount} credits.` : `You pay ${-e.amount} credits.`);
+        this.say(e.amount >= 0 ? `+${e.amount} credits.` : `You pay ${-e.amount} credits.`, 'loot');
         break;
       case 'heal':
         this.changeHp(e.amount);
@@ -252,8 +407,8 @@ export class GameEngine {
       case 'fight':
         if (actor) {
           actor.hostile = true;
-          this.say(`${actor.def.name} turns hostile!`);
-          this.worldVersion.update((v) => v + 1);
+          this.say(`${actor.def.name} turns hostile!`, 'hurt');
+          if (!this.battle()) this.pendingBattle = actor;
         }
         break;
       case 'remove':
@@ -265,15 +420,33 @@ export class GameEngine {
     }
   }
 
+  /** Uses a healing item. Returns false if nothing happened. */
+  private consume(index: number) {
+    const item = this.inventory()[index];
+    if (!item?.heal) {
+      if (item) this.say(`${item.name}: ${item.attackBonus ? `+${item.attackBonus} attack while carried.` : 'nothing to use it on here.'}`);
+      return false;
+    }
+    if (this.hp() === this.maxHp) {
+      this.say('You are already at full health.');
+      return false;
+    }
+    this.inventory.update((inv) => inv.filter((_, i) => i !== index));
+    this.changeHp(item.heal);
+    this.say(`You use the ${item.name} (+${item.heal} HP).`, 'loot');
+    return true;
+  }
+
   private gainItem(def: ActorDef | undefined) {
     if (!def) return;
     if (def.credits) {
       this.credits.update((c) => c + def.credits!);
-      this.say(`${def.name}: +${def.credits} credits.`);
+      this.say(`${def.name}: +${def.credits} credits.`, 'loot');
     } else {
       this.inventory.update((inv) => [...inv, def]);
-      this.say(`You got: ${def.name}.`);
+      this.say(`You got: ${def.name}.`, 'loot');
     }
+    this.emit('pickup');
   }
 
   private enterCell(x: number, y: number) {
@@ -302,34 +475,24 @@ export class GameEngine {
   private win() {
     if (this.status() !== 'playing') return;
     this.closeDialogue(false);
+    this.battle.set(null);
     this.status.set('won');
-    this.say(`Level complete! Credits: ${this.credits()}.`);
-  }
-
-  private fightRound(enemy: ActorInstance) {
-    const dealt = this.rng.int(...this.attackPower());
-    enemy.hp -= dealt;
-    if (enemy.hp <= 0) {
-      this.say(`You take down ${enemy.def.name} (${dealt} dmg).`);
-      this.removeActor(enemy);
-      for (const drop of enemy.def.drops ?? []) this.gainItem(this.defs.get(drop));
-      if (enemy.def.defeatFlag) this.flags.update((f) => new Set(f).add(enemy.def.defeatFlag!));
-      return;
-    }
-    const [lo, hi] = enemy.def.attack ?? [1, 3];
-    const hit = this.rng.int(lo, hi);
-    this.say(`You hit ${enemy.def.name} for ${dealt}. It hits back for ${hit}.`);
-    this.changeHp(-hit);
-    this.worldVersion.update((v) => v + 1);
+    this.say(`Level complete! Credits: ${this.credits()}.`, 'story');
   }
 
   private changeHp(delta: number) {
     this.hp.update((hp) => Math.max(0, Math.min(this.maxHp, hp + delta)));
+    if (delta > 0) this.emit('heal', delta);
     if (delta < 0 && this.hp() === 0 && this.status() === 'playing') {
       this.closeDialogue(false);
       this.status.set('lost');
-      this.say('You flatline on the wet asphalt.');
+      this.emit('playerDown');
+      this.say('You flatline on the wet asphalt.', 'hurt');
     }
+  }
+
+  private emit(type: GameFx['type'], amount?: number) {
+    this.fx.set({ seq: ++this.fxSeq, type, amount });
   }
 
   private removeActor(actor: ActorInstance) {
@@ -353,7 +516,7 @@ export class GameEngine {
     this.worldVersion.update((v) => v + 1);
   }
 
-  private say(message: string) {
-    this.log.update((log) => [...log.slice(-49), message]);
+  private say(text: string, kind: LogKind = 'info') {
+    this.log.update((log) => [...log.slice(-(LOG_SIZE - 1)), { text, kind }]);
   }
 }

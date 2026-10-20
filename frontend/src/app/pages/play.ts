@@ -1,6 +1,8 @@
 import {
   ChangeDetectionStrategy,
   Component,
+  ElementRef,
+  afterRenderEffect,
   computed,
   effect,
   inject,
@@ -15,11 +17,13 @@ import { RouterLink } from '@angular/router';
 import { Api, errorMessage } from '../core/api';
 import { Auth } from '../core/auth';
 import { Automap } from '../game/automap';
+import { BattleScreen } from '../game/battle-screen';
 import { CityView } from '../game/city-view';
 import { DialogueBox } from '../game/dialogue-box';
 import { GameEngine } from '../game/engine';
 import { KIND_LABELS, normalizeLevel } from '../game/level-format';
 import { randomSeed } from '../game/rng';
+import { Sfx } from '../game/sfx';
 
 type Action = (e: GameEngine) => void;
 type Command = 'forward' | 'back' | 'strafeLeft' | 'strafeRight' | 'turnLeft' | 'turnRight' | 'talk' | 'attack';
@@ -42,15 +46,20 @@ const KEYS: Record<string, Command> = {
 
 @Component({
   selector: 'app-play',
-  imports: [CityView, Automap, DialogueBox, RouterLink],
+  imports: [CityView, Automap, DialogueBox, BattleScreen, RouterLink],
   changeDetection: ChangeDetectionStrategy.OnPush,
-  host: { '(document:keydown)': 'onKey($event)' },
+  host: {
+    '(document:keydown)': 'onKey($event)',
+    '(document:pointerdown)': 'sfx.unlock()',
+    '(document:fullscreenchange)': 'onFullscreenChange()',
+  },
   templateUrl: './play.html',
   styleUrl: './play.scss',
 })
 export class PlayPage {
   private readonly api = inject(Api);
   protected readonly auth = inject(Auth);
+  protected readonly sfx = inject(Sfx);
   protected readonly kindLabels = KIND_LABELS;
 
   /** Route param, bound via withComponentInputBinding. */
@@ -67,10 +76,16 @@ export class PlayPage {
   });
 
   protected readonly engine = signal<GameEngine | null>(null);
-  protected readonly lastLog = computed(() => this.engine()?.log().slice(-7) ?? []);
+  protected readonly fullscreen = signal(false);
+  protected readonly canFullscreen = typeof document !== 'undefined' && document.fullscreenEnabled;
+  /** Flashes the HP bar in the status panel when the player takes a hit. */
+  protected readonly hpHurt = signal(false);
   protected readonly emptySlots = computed(() => Array.from({ length: Math.max(0, 8 - (this.engine()?.inventory().length ?? 0)) }));
   private readonly view = viewChild(CityView);
   private readonly dialogueBox = viewChild(DialogueBox);
+  private readonly battleScreen = viewChild(BattleScreen);
+  private readonly layout = viewChild<ElementRef<HTMLElement>>('layout');
+  private readonly feed = viewChild<ElementRef<HTMLElement>>('feed');
   /** One queued action while an animation is playing, so held keys keep walking smoothly. */
   private queued: Action | null = null;
 
@@ -81,6 +96,37 @@ export class PlayPage {
       // The engine reads its own signals while setting up; don't let this effect track them.
       if (level) untracked(() => this.engine.set(new GameEngine(level.data, seed)));
     });
+    // Sound and attention cues for game events.
+    effect(() => {
+      const fx = this.engine()?.fx();
+      if (!fx) return;
+      untracked(() => {
+        this.sfx.play(fx.type);
+        if (fx.type === 'enemyHit') {
+          this.hpHurt.set(true);
+          setTimeout(() => this.hpHurt.set(false), 450);
+        }
+      });
+    });
+    // Keep the feed scrolled to the newest line.
+    afterRenderEffect(() => {
+      this.engine()?.log();
+      const el = this.feed()?.nativeElement;
+      if (el) el.scrollTop = el.scrollHeight;
+    });
+  }
+
+  protected onFullscreenChange() {
+    this.fullscreen.set(!!document.fullscreenElement);
+  }
+
+  protected async toggleFullscreen() {
+    try {
+      if (document.fullscreenElement) await document.exitFullscreen();
+      else await this.layout()?.nativeElement.requestFullscreen();
+    } catch {
+      // Not allowed here (e.g. iframe without permission); ignore.
+    }
   }
 
   protected act(action: Action) {
@@ -132,6 +178,7 @@ export class PlayPage {
     const target = event.target;
     if (!engine || event.ctrlKey || event.metaKey || event.altKey) return;
     if (target instanceof Element && target.closest('input, textarea, select')) return;
+    this.sfx.unlock();
     const k = event.key.toLowerCase();
 
     if (engine.dialogue()) {
@@ -145,6 +192,16 @@ export class PlayPage {
       } else {
         return;
       }
+      event.preventDefault();
+      return;
+    }
+
+    if (engine.battle()) {
+      const battle = this.battleScreen();
+      if (/^[0-9]$/.test(k)) battle?.select(Number(k));
+      else if (k === 'x') battle?.select(1);
+      else if (k === 'escape' || k === 'backspace') battle?.back();
+      else return;
       event.preventDefault();
       return;
     }

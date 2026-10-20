@@ -8,7 +8,7 @@ import {
   viewChild,
 } from '@angular/core';
 import { GameEngine } from './engine';
-import { key } from './scenario';
+import { isHidden, key } from './scenario';
 
 const SIZE = 240;
 const ZOOMS = [6, 9, 12, 16, 22, 30];
@@ -116,7 +116,8 @@ function drawMap(ctx: CanvasRenderingContext2D, engine: GameEngine, px: number, 
     ctx.fillStyle = '#121624';
     ctx.fillRect(sx, sy, cell, cell);
 
-    const actor = actors.get(key(x, y));
+    const found = actors.get(key(x, y));
+    const actor = found && !isHidden(found) ? found : undefined;
     const mark = x === exit.x && y === exit.y ? (['▼', '#00f0ff'] as const) : actor ? MARKS[actor.def.kind] : undefined;
     if (mark) {
       ctx.fillStyle = mark[1];

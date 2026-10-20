@@ -1,4 +1,4 @@
-import { ActorInstance } from './scenario';
+import { ActorInstance, isHidden } from './scenario';
 import { TEX_H, TEX_W, Texture, WALL_H, buildingTextures, pack, skyline } from './textures';
 import { Theme } from './themes';
 
@@ -233,7 +233,7 @@ export class CityRenderer {
       const depth = invDet * (-planeY * sx + planeX * sy);
       if (depth > 0.2 && depth < this.theme.fogDistance * 1.6) items.push({ sprite, x: gx, y: gy, depth, tx });
     };
-    for (const a of world.actors) if (a.def.kind !== 'trigger') add(a.def.sprite, a.x, a.y);
+    for (const a of world.actors) if (!isHidden(a)) add(a.def.sprite, a.x, a.y);
     add('🚇', world.exit.x, world.exit.y);
     items.sort((a, b) => b.depth - a.depth);
 

@@ -64,7 +64,9 @@ The editor has three tabs:
   zoomable canvas (up to 128×128). Place characters and items from the library, and set the random pool.
 - **Characters & items**: the level's library of actors.
   - *Character*: talks; blocks the street.
-  - *Enemy*: HP, damage, hostile-on-sight, drops, a flag set on defeat; can also talk first.
+  - *Enemy*: HP, damage, drops, a flag set on defeat. **Hidden ambushers** are invisible on the street and the
+    map; walking into one starts an old-school battle (encounter wipe, then FIGHT / TALK / ITEM / RUN).
+    Visible enemies (story bosses) talk first; a *Start fight* effect or the Attack button starts the battle.
   - *Item*: picked up on step; can heal, add attack, or give credits. Story items (keys, passes) need no numbers.
   - *Terminal / sign*: an object to read or use.
   - *Story trigger*: invisible; its text plays once when the player steps on the cell.
@@ -95,7 +97,12 @@ Levels from the first (dungeon) version are converted automatically when opened.
 ## Controls
 
 `W`/`↑` forward · `S`/`↓` back · `A`/`D` strafe · `Q`/`←` and `E`/`→` turn · `F`/`Space` talk · `X` attack ·
-`1`–`9` pick a dialogue choice (or use an inventory item outside dialogue). On mobile, use the on-screen pad.
+`1`–`9` pick a dialogue choice (or use an inventory item outside dialogue).
+In battle: `1` fight · `2` talk · `3` items (`0`/`Esc` back) · `4` run. On mobile, use the on-screen buttons.
+
+Battles play out in short beats with chiptune bleeps (synthesised with WebAudio; 🔊 toggles sound): your hit,
+the enemy's HP bar drains, it strikes back, the screen flashes red and your HP bar flashes. The ⛶ button switches
+the game to fullscreen.
 
 The engine moves on the grid; the view animates walking and turning, and holding a key keeps walking smoothly.
 

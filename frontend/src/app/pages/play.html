@@ -3,12 +3,12 @@
 } @else if (level.error()) {
   <p class="page error">{{ message(level.error()) }}</p>
 } @else if (engine(); as game) {
-  <div class="layout">
+  <div class="layout" #layout [class.fs]="fullscreen()">
     <section class="panel status">
       <div class="panel-title">{{ level.value()?.name }}</div>
       <div class="hp">
         <span>HP</span>
-        <div class="bar"><span [style.width]="percent(game.hp(), game.maxHp)"></span></div>
+        <div class="bar" [class.hurt]="hpHurt()"><span [style.width]="percent(game.hp(), game.maxHp)"></span></div>
         <span>{{ game.hp() }}/{{ game.maxHp }}</span>
       </div>
       <dl class="stats">
@@ -32,6 +32,7 @@
 
     <section class="view">
       <app-city-view [engine]="game" (settled)="onSettled()" />
+      <app-battle-screen [engine]="game" />
       @if (game.dialogue(); as d) {
         <app-dialogue-box class="dialogue" [view]="d" (choose)="game.choose($event)" />
       }
@@ -83,9 +84,11 @@
 
     <section class="panel log" aria-live="polite">
       <div class="panel-title">Feed</div>
-      @for (line of lastLog(); track $index; let last = $last) {
-        <p [class.latest]="last">&gt; {{ line }}</p>
-      }
+      <div class="feed" #feed>
+        @for (line of game.log(); track $index; let last = $last) {
+          <p [class]="line.kind" [class.latest]="last">&gt; {{ line.text }}</p>
+        }
+      </div>
     </section>
 
     <section class="panel controls" aria-label="Movement controls">
@@ -100,8 +103,12 @@
       <div class="meta">
         <button class="btn" (click)="command('talk')" title="Talk / use (F or Space)">💬</button>
         <button class="btn pink" (click)="command('attack')" title="Attack (X)">⚔</button>
-        <button class="btn" (click)="restart(false)" title="New random run">🎲</button>
+        <button class="btn" (click)="sfx.toggleMute()" [title]="sfx.muted() ? 'Sound off' : 'Sound on'">{{ sfx.muted() ? '🔇' : '🔊' }}</button>
+        @if (canFullscreen) {
+          <button class="btn" (click)="toggleFullscreen()" [title]="fullscreen() ? 'Exit fullscreen' : 'Fullscreen'">{{ fullscreen() ? '🗗' : '⛶' }}</button>
+        }
         @if (auth.adminView()) {
+          <button class="btn" (click)="restart(false)" title="New random run (admin)">🎲</button>
           <a class="btn" [routerLink]="['/admin/levels', id()]" title="Edit this level">🛠</a>
         }
       </div>

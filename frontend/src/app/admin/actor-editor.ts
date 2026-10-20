@@ -14,7 +14,7 @@ const SPRITES: Record<ActorKind, string[]> = {
 
 const KIND_HINTS: Record<ActorKind, string> = {
   npc: 'Blocks the street. The player talks to it by walking into it or pressing F.',
-  enemy: 'Hostile enemies attack when bumped. Non-hostile enemies talk first; use a "Start fight" effect to turn them.',
+  enemy: 'Hidden ambushers are invisible on the street and on the map; walking into one starts an old-school battle. Visible enemies talk first (story bosses); a "Start fight" effect or the Attack button starts the battle. In battle the player can FIGHT, TALK (uses this dialogue), use an ITEM or RUN.',
   item: 'Picked up when the player steps on it. Optional dialogue shows on pickup.',
   terminal: 'An object to read or use: signs, terminals, doors. Works like a character.',
   trigger: 'Invisible. Its dialogue plays once when the player steps on the cell: narration, flashbacks, radio calls.',
@@ -52,7 +52,7 @@ const KIND_HINTS: Record<ActorKind, string> = {
         <label>Damage min <input type="number" min="0" [ngModel]="a.attack?.[0] ?? 1" (ngModelChange)="setAttack(0, +$event)" /></label>
         <label>Damage max <input type="number" min="0" [ngModel]="a.attack?.[1] ?? 3" (ngModelChange)="setAttack(1, +$event)" /></label>
         <label>Flag on defeat <input [(ngModel)]="a.defeatFlag" (ngModelChange)="touch()" placeholder="e.g. razor_down" /></label>
-        <label class="check"><input type="checkbox" [(ngModel)]="a.hostile" (ngModelChange)="touch()" /> Hostile on sight</label>
+        <label class="check" title="Invisible until the player walks into it, then attacks"><input type="checkbox" [(ngModel)]="a.hostile" (ngModelChange)="touch()" /> Hidden ambusher</label>
       </div>
       <div class="drops">
         <span>Drops:</span>
