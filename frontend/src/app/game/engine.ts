@@ -42,6 +42,8 @@ export class GameEngine {
   readonly worldVersion = signal(0);
   readonly explored = new Set<string>();
   private context: DialogueContext | null = null;
+  /** "Only once" choices already picked, per actor instance. */
+  private readonly usedChoices = new Map<number, Set<DialogueChoice>>();
 
   /** The actor directly in front of the player, if any. */
   readonly facing = computed(() => {
@@ -151,6 +153,10 @@ export class GameEngine {
     }
     const choice = ctx.choices[index];
     if (!choice) return;
+    if (choice.once && ctx.actor) {
+      const used = this.usedChoices.get(ctx.actor.uid) ?? new Set();
+      this.usedChoices.set(ctx.actor.uid, used.add(choice));
+    }
     this.closeDialogue(false);
     for (const effect of choice.effects) this.applyEffect(effect, ctx.actor);
     const next = ctx.actor?.def.dialogue.find((n) => n.id === choice.next);
@@ -179,7 +185,8 @@ export class GameEngine {
   }
 
   private openNode(actor: ActorInstance, node: DialogueNode) {
-    const choices = node.choices.filter((c) => this.check(c.requires));
+    const used = this.usedChoices.get(actor.uid);
+    const choices = node.choices.filter((c) => this.check(c.requires) && !used?.has(c));
     this.context = { actor, choices };
     this.dialogue.set({
       speaker: actor.def.name,

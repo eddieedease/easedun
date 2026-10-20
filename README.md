@@ -76,6 +76,7 @@ opens, so conditional variants go above the default greeting. Each choice can:
 
 - jump to another node, or end the conversation
 - be shown only if a condition holds: has flag, lacks flag, has item, has at least N credits
+- be marked **once**: it disappears after the player picks it (per character, per run). Handy for gifts and rewards
 - run effects: set/clear flag, give/take item, ±credits, heal/hurt, start a fight, remove the actor, complete the level
 
 Flags tie it together: e.g. defeating Razor sets `razor_down`, handing Juno the chip sets `delivered`, and the

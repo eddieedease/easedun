@@ -45,6 +45,9 @@
               <option [value]="target.id">→ {{ target.id }}</option>
             }
           </select>
+          <label class="once" title="Hide this choice after the player picks it once">
+            <input type="checkbox" [(ngModel)]="choice.once" (ngModelChange)="touch()" /> once
+          </label>
           <button class="btn mini" (click)="toggleCondition(choice)" [class.on]="choice.requires">if…</button>
           <button class="btn mini danger" (click)="removeChoice(node, ci)" aria-label="Delete choice">✕</button>
         </div>

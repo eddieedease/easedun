@@ -41,6 +41,8 @@ export interface DialogueChoice {
   next: string;
   requires?: Condition;
   effects: Effect[];
+  /** Hide this choice after it has been picked once (per character, per run). */
+  once?: boolean;
 }
 
 export interface DialogueNode {

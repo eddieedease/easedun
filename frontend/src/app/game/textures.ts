@@ -2,8 +2,10 @@ import { createRng } from './rng';
 import { Theme } from './themes';
 
 export const TEX_W = 64;
-/** Buildings are WALL_H cells tall. */
-export const WALL_H = 3;
+/** Buildings are WALL_H cells tall. One cell is ~10 m, so a texel is ~15 cm. */
+export const WALL_H = 4;
+/** Texels per metre, used to lay out storeys, doors and signs at human scale. */
+const M = TEX_W / 10;
 export const TEX_H = TEX_W * WALL_H;
 
 export interface Texture {
@@ -44,43 +46,54 @@ export function buildingTextures(theme: Theme, seed: number, count = 8): Texture
     // Roof ledge.
     for (let y = 0; y < 4; y++) for (let x = 0; x < TEX_W; x++) set(x, y, [base[0] * 0.5, base[1] * 0.5, base[2] * 0.5]);
 
-    // Window grid on the upper floors.
-    const groundTop = TEX_H - 30;
+    // Upper storeys (~3.5 m each) with ~1.4 x 1.7 m windows every 3 m.
+    const groundTop = TEX_H - Math.round(4.5 * M);
+    const storey = Math.round(3.5 * M);
+    const winW = Math.round(1.4 * M);
+    const winH = Math.round(1.7 * M);
+    const pitch = Math.round(3.2 * M);
     const litChance = 0.2 + rng.next() * 0.35;
     const windowColor = rng.pick(theme.neon);
-    for (let wy = 10; wy < groundTop - 14; wy += 14) {
-      for (let wx = 5; wx < TEX_W - 6; wx += 15) {
+    for (let floorTop = groundTop - storey; floorTop > 6; floorTop -= storey) {
+      const wy = floorTop + Math.round(0.9 * M);
+      for (let wx = Math.round(0.9 * M); wx + winW < TEX_W; wx += pitch) {
         const lit = rng.next() < litChance;
         const warm: RGB = rng.next() < 0.5 ? [255, 210, 140] : windowColor;
-        for (let y = 0; y < 8; y++) {
-          for (let x = 0; x < 8; x++) {
-            if (lit) set(wx + x, wy + y, scale(warm, 0.75 + (y / 8) * 0.25), true);
+        for (let y = 0; y < winH; y++) {
+          for (let x = 0; x < winW; x++) {
+            if (lit) set(wx + x, wy + y, scale(warm, 0.75 + (y / winH) * 0.25), true);
             else set(wx + x, wy + y, [12, 14, 22 + y * 2]);
           }
         }
       }
     }
 
-    // Ground floor: dark shop front with a lit door and a neon band above.
-    for (let y = groundTop; y < TEX_H; y++) {
-      for (let x = 2; x < TEX_W - 2; x++) set(x, y, [10, 10, 16]);
+    // Ground floor (4.5 m): dark shop windows, a lit 2.4 m door and a neon band at ~3.5 m.
+    const doorW = Math.round(1.6 * M);
+    const doorH = Math.round(2.4 * M);
+    const doorX = rng.int(Math.round(1 * M), TEX_W - doorW - Math.round(1 * M));
+    for (let y = TEX_H - Math.round(3 * M); y < TEX_H - Math.round(0.5 * M); y++) {
+      for (let x = 2; x < TEX_W - 2; x++) set(x, y, [14, 14, 24]);
     }
-    for (let y = groundTop + 8; y < TEX_H; y++) {
-      for (let x = 24; x < 40; x++) set(x, y, scale(accent, 0.35 + (y - groundTop) / 60), true);
+    for (let y = TEX_H - doorH; y < TEX_H; y++) {
+      for (let x = doorX; x < doorX + doorW; x++) set(x, y, scale(accent, 0.35 + (y - (TEX_H - doorH)) / (doorH * 1.6)), true);
     }
-    for (let y = groundTop - 5; y < groundTop - 1; y++) {
+    const band = TEX_H - Math.round(3.8 * M);
+    for (let y = band; y < band + Math.round(0.5 * M); y++) {
       for (let x = 2; x < TEX_W - 2; x++) set(x, y, accent, true);
     }
 
-    // Some buildings get a vertical neon sign.
+    // Some buildings get a tall vertical neon sign (~1.2 m wide, 9 m high).
     if (rng.next() < 0.6) {
-      const sx = rng.next() < 0.5 ? 2 : TEX_W - 10;
+      const signW = Math.round(1.2 * M);
+      const signH = Math.round(9 * M);
+      const sx = rng.next() < 0.5 ? 2 : TEX_W - signW - 2;
       const signColor = rng.pick(theme.neon);
-      const top = rng.int(20, 60);
-      for (let y = top; y < top + 70; y++) {
-        for (let x = sx; x < sx + 8; x++) {
-          const edge = x === sx || x === sx + 7 || y === top || y === top + 69;
-          const glyph = (y - top) % 12 < 8 && x > sx + 1 && x < sx + 6 && rng.next() < 0.7;
+      const top = rng.int(Math.round(6 * M), groundTop - signH - Math.round(1 * M));
+      for (let y = top; y < top + signH; y++) {
+        for (let x = sx; x < sx + signW; x++) {
+          const edge = x === sx || x === sx + signW - 1 || y === top || y === top + signH - 1;
+          const glyph = (y - top) % 10 < 7 && x > sx + 1 && x < sx + signW - 2 && rng.next() < 0.7;
           set(x, y, edge || glyph ? signColor : scale(signColor, 0.25), edge || glyph);
         }
       }

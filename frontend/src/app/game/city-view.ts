@@ -134,7 +134,7 @@ export class CityView {
       this.cam.x = tw.from.x + (tw.to.x - tw.from.x) * t;
       this.cam.y = tw.from.y + (tw.to.y - tw.from.y) * t;
       this.cam.angle = tw.from.angle + (tw.to.angle - tw.from.angle) * t;
-      this.cam.bob = tw.walking ? Math.sin(raw * Math.PI) * 5 : 0;
+      this.cam.bob = tw.walking ? Math.sin(raw * Math.PI) * 3 : 0;
       if (raw >= 1) {
         if (tw.bump) Object.assign(this.cam, tw.from);
         this.tween = null;

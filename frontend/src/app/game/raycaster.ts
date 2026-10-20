@@ -6,8 +6,8 @@ export const VIEW_W = 480;
 export const VIEW_H = 300;
 const PLANE = 0.66; // half-width of the camera plane => ~67° FOV
 const PROJ = VIEW_W / 2 / PLANE;
-const EYE = 0.5; // eye height in cells
-const SPRITE_SIZE = 0.6;
+const EYE = 0.18; // eye height in cells (~1.8 m if a cell is ~10 m)
+const SPRITE_SIZE = 0.26; // a bit taller than a real person, so faces stay readable
 
 export interface Camera {
   x: number;
