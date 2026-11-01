@@ -3,11 +3,12 @@ declare(strict_types=1);
 
 const SERVER_DIR = __DIR__;
 const CONFIG_FILE = __DIR__ . '/config.php';
-const SCHEMA_VERSION = 1;
+const SCHEMA_VERSION = 2;
 
 require_once __DIR__ . '/http.php';
 require_once __DIR__ . '/schema.php';
 require_once __DIR__ . '/levels.php';
+require_once __DIR__ . '/enemies.php';
 
 function app_config(): ?array
 {
@@ -98,4 +99,21 @@ function require_admin(): array
         fail(403, 'forbidden', 'Admin only.');
     }
     return $user;
+}
+
+/**
+ * Brings an existing install up to the current schema. Every statement is
+ * idempotent (CREATE TABLE IF NOT EXISTS), so upgrades just re-run them.
+ */
+function ensure_schema(): void
+{
+    $settings = t('settings');
+    $version = (int)(db()->query("SELECT value FROM {$settings} WHERE name = 'schema_version'")->fetchColumn() ?: 0);
+    if ($version >= SCHEMA_VERSION) {
+        return;
+    }
+    foreach (schema_statements(app_config()['db']['prefix'] ?? '') as $sql) {
+        db()->exec($sql);
+    }
+    db()->prepare("REPLACE INTO {$settings} (name, value) VALUES ('schema_version', ?)")->execute([(string)SCHEMA_VERSION]);
 }

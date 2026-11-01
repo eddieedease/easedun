@@ -53,7 +53,7 @@
       <div class="panel-title">Contact</div>
       @if (game.facing(); as target) {
         <div class="target">
-          <span class="big">{{ target.def.sprite }}</span>
+          <app-sprite class="big" [image]="target.def.image" [emoji]="target.def.sprite" />
           <div>
             <div class="target-name">{{ target.def.name }}</div>
             <small [class.hostile]="target.hostile">{{ target.hostile ? 'Hostile' : kindLabels[target.def.kind] }}</small>

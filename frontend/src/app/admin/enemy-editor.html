@@ -1,0 +1,69 @@
+<div class="page">
+  <div class="head">
+    <h1>{{ id() ? 'Edit enemy' : 'New enemy' }}</h1>
+    <span class="spacer"></span>
+    @if (dirty()) { <span class="unsaved">● unsaved</span> }
+    @if (notice()) { <span class="ok">{{ notice() }}</span> }
+    <button class="btn primary" (click)="save()" [disabled]="saving() || !image() || !name.trim()">Save</button>
+    @if (id()) { <button class="btn danger" (click)="remove()">Delete</button> }
+    <a routerLink="/admin/enemies">Bestiary</a>
+  </div>
+  @if (error()) { <p class="error">{{ error() }}</p> }
+  @if (!image()) { <p class="hint">Draw a sprite or upload an image to be able to save.</p> }
+
+  @if (loading()) {
+    <p>Loading…</p>
+  } @else {
+    <div class="layout">
+      <section class="panel">
+        <div class="panel-title">Sprite</div>
+        <label class="size">Grid
+          <select [ngModel]="stats().size" (ngModelChange)="setSize(+$event)">
+            <option [ngValue]="16">16 × 16</option>
+            <option [ngValue]="32">32 × 32</option>
+            <option [ngValue]="64">64 × 64</option>
+          </select>
+        </label>
+        <app-pixel-editor [size]="stats().size" [value]="image()" (changed)="onSprite($event)" />
+        <p class="hint">Upload any picture: it is shrunk to the grid and turned into pixel art. Transparent pixels are see-through in game.</p>
+      </section>
+
+      <section class="panel">
+        <div class="panel-title">Stats &amp; traits</div>
+        <label>Name <input [(ngModel)]="name" (ngModelChange)="dirty.set(true)" maxlength="80" /></label>
+        <div class="fields">
+          <label>HP <input type="number" min="1" max="999" [ngModel]="stats().hp" (ngModelChange)="set('hp', +$event)" /></label>
+          <label>Damage min <input type="number" min="0" max="99" [ngModel]="stats().attack[0]" (ngModelChange)="setPair('attack', 0, +$event)" /></label>
+          <label>Damage max <input type="number" min="0" max="99" [ngModel]="stats().attack[1]" (ngModelChange)="setPair('attack', 1, +$event)" /></label>
+          <label>Defense <input type="number" min="0" max="20" [ngModel]="stats().defense" (ngModelChange)="set('defense', +$event)" title="Damage blocked per hit" /></label>
+          <label>Credits min <input type="number" min="0" [ngModel]="stats().credits[0]" (ngModelChange)="setPair('credits', 0, +$event)" /></label>
+          <label>Credits max <input type="number" min="0" [ngModel]="stats().credits[1]" (ngModelChange)="setPair('credits', 1, +$event)" /></label>
+        </div>
+        <div class="traits">
+          @for (t of traits; track t[0]) {
+            <label class="trait" [class.on]="stats().traits.includes(t[0])">
+              <input type="checkbox" [checked]="stats().traits.includes(t[0])" (change)="toggleTrait(t[0])" />
+              <strong>{{ t[1].label }}</strong> <small>{{ t[1].hint }}</small>
+            </label>
+          }
+        </div>
+        <label>Battle cry (shown when it appears)
+          <input [ngModel]="stats().intro" (ngModelChange)="set('intro', $event)" maxlength="200" placeholder="e.g. Fresh meat for the grinder!" />
+        </label>
+        <label>Last words (shown when defeated)
+          <input [ngModel]="stats().defeat" (ngModelChange)="set('defeat', $event)" maxlength="200" placeholder="e.g. The drone sputters and dies." />
+        </label>
+
+        <div class="panel-title sub">Preview</div>
+        <div class="preview">
+          <div class="plate">
+            <span>{{ name }}</span>
+            <div class="bar"><span></span></div>
+            <small>{{ stats().hp }} / {{ stats().hp }}</small>
+          </div>
+          @if (image()) { <img [src]="image()" alt="" /> } @else { <span class="empty">no sprite yet</span> }
+        </div>
+      </section>
+    </div>
+  }
+</div>

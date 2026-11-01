@@ -1,9 +1,10 @@
-import { ChangeDetectionStrategy, Component, computed, effect, inject, input, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, effect, inject, input, resource, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { Api, errorMessage } from '../core/api';
-import { ActorKind, CellChar, LevelData, LevelInput } from '../core/models';
-import { KIND_LABELS, emptyLevel, newActor, normalizeLevel } from '../game/level-format';
+import { ActorDef, ActorKind, CellChar, LevelData, LevelInput } from '../core/models';
+import { KIND_LABELS, actorFromEnemy, emptyLevel, newActor, normalizeLevel } from '../game/level-format';
+import { Sprite } from '../game/sprite';
 import { THEME_LIST } from '../game/themes';
 import { ActorEditor } from './actor-editor';
 import { CELL_COLORS, MapCanvas } from './map-canvas';
@@ -21,7 +22,7 @@ const CELL_TOOLS: { tool: CellChar; label: string; hint: string }[] = [
 
 @Component({
   selector: 'app-level-editor',
-  imports: [FormsModule, RouterLink, MapCanvas, ActorEditor],
+  imports: [FormsModule, RouterLink, MapCanvas, ActorEditor, Sprite],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './level-editor.html',
   styleUrl: './level-editor.scss',
@@ -55,6 +56,11 @@ export class LevelEditorPage {
   protected readonly dirty = signal(false);
   protected readonly error = signal('');
   protected readonly notice = signal('');
+
+  /** The global enemy library, for "from bestiary" actors. */
+  protected readonly bestiary = resource({ loader: () => this.api.enemies() });
+  protected readonly bestiaryList = computed(() => this.bestiary.value() ?? []);
+  private readonly bestiaryById = computed(() => new Map(this.bestiaryList().map((e) => [e.id, e])));
 
   protected readonly current = computed(() => this.data().actors.find((a) => a.id === this.selectedActor()) ?? null);
   protected readonly counts = computed(() => {
@@ -227,6 +233,20 @@ export class LevelEditorPage {
 
   protected addActor(kind: ActorKind) {
     const actor = newActor(kind);
+    this.data.update((d) => ({ ...d, actors: [...d.actors, actor] }));
+    this.selectedActor.set(actor.id);
+    this.dirty.set(true);
+  }
+
+  /** Pixel sprite for actors based on a bestiary enemy. */
+  protected img(a: ActorDef) {
+    return a.enemyRef ? (this.bestiaryById().get(a.enemyRef)?.image ?? '') : '';
+  }
+
+  protected addFromBestiary(id: number) {
+    const enemy = this.bestiaryById().get(id);
+    if (!enemy) return;
+    const actor = actorFromEnemy(enemy);
     this.data.update((d) => ({ ...d, actors: [...d.actors, actor] }));
     this.selectedActor.set(actor.id);
     this.dirty.set(true);

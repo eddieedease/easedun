@@ -11,7 +11,7 @@
     </div>
 
     <div class="foe" [class.enter]="b.phase !== 'intro'" [class.hit]="enemyHit()" [class.down]="b.phase === 'won'">
-      <span class="sprite">{{ e.def.sprite }}</span>
+      <app-sprite class="sprite" [image]="e.def.image" [emoji]="e.def.sprite" />
       <span class="shadow"></span>
     </div>
 

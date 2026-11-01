@@ -263,22 +263,23 @@ export class CityRenderer {
   }
 
   private drawSprites(world: WorldView, cam: Camera, dirX: number, dirY: number, planeX: number, planeY: number, horizon: number) {
-    const items: { sprite: string; x: number; y: number; depth: number; tx: number }[] = [];
+    const items: { tex: SpriteTexture; x: number; y: number; depth: number; tx: number }[] = [];
     const invDet = 1 / (planeX * dirY - dirX * planeY);
-    const add = (sprite: string, gx: number, gy: number) => {
+    const add = (tex: SpriteTexture | null, gx: number, gy: number) => {
+      if (!tex) return;
       const sx = gx + 0.5 - cam.x;
       const sy = gy + 0.5 - cam.y;
       const tx = invDet * (dirY * sx - dirX * sy);
       const depth = invDet * (-planeY * sx + planeX * sy);
-      if (depth > 0.2 && depth < this.theme.fogDistance * 1.6) items.push({ sprite, x: gx, y: gy, depth, tx });
+      if (depth > 0.2 && depth < this.theme.fogDistance * 1.6) items.push({ tex, x: gx, y: gy, depth, tx });
     };
-    for (const a of world.actors) if (!isHidden(a)) add(a.def.sprite, a.x, a.y);
-    add('🚇', world.exit.x, world.exit.y);
+    for (const a of world.actors) if (!isHidden(a)) add(a.def.image ? imageTexture(a.def.image) : emojiTexture(a.def.sprite), a.x, a.y);
+    add(emojiTexture('🚇'), world.exit.x, world.exit.y);
     items.sort((a, b) => b.depth - a.depth);
 
     const [fogR, fogG, fogB] = this.theme.fog;
     for (const s of items) {
-      const img = emojiTexture(s.sprite);
+      const { data: img, w: tw, h: th } = s.tex;
       const screenX = (VIEW_W / 2) * (1 + s.tx / s.depth);
       const size = (SPRITE_SIZE * PROJ) / s.depth;
       const bottom = horizon + (EYE * PROJ) / s.depth;
@@ -291,10 +292,10 @@ export class CityRenderer {
       const fog = this.fogFactor(s.depth) * 0.8;
       for (let x = x0; x < x1; x++) {
         if (s.depth >= this.zbuf[x]) continue;
-        const u = Math.floor(((x - left) / size) * EMOJI_SIZE);
+        const u = Math.floor(((x - left) / size) * tw);
         for (let y = y0; y < y1; y++) {
-          const v = Math.floor(((y - top) / size) * EMOJI_SIZE);
-          const i = (v * EMOJI_SIZE + u) * 4;
+          const v = Math.floor(((y - top) / size) * th);
+          const i = (v * tw + u) * 4;
           if (img[i + 3] < 128) continue;
           const r = img[i];
           const g = img[i + 1];
@@ -333,13 +334,19 @@ export class CityRenderer {
   }
 }
 
+interface SpriteTexture {
+  data: Uint8ClampedArray;
+  w: number;
+  h: number;
+}
+
 const EMOJI_SIZE = 128;
-const emojiCache = new Map<string, Uint8ClampedArray>();
+const spriteCache = new Map<string, SpriteTexture | 'loading'>();
 
 /** Renders an emoji once into a small RGBA texture for sprite drawing. */
-function emojiTexture(emoji: string) {
-  let data = emojiCache.get(emoji);
-  if (!data) {
+function emojiTexture(emoji: string): SpriteTexture {
+  let tex = spriteCache.get(emoji);
+  if (!tex || tex === 'loading') {
     const canvas = document.createElement('canvas');
     canvas.width = canvas.height = EMOJI_SIZE;
     const ctx = canvas.getContext('2d', { willReadFrequently: true })!;
@@ -347,10 +354,28 @@ function emojiTexture(emoji: string) {
     ctx.textAlign = 'center';
     ctx.textBaseline = 'bottom';
     ctx.fillText(emoji, EMOJI_SIZE / 2, EMOJI_SIZE);
-    data = ctx.getImageData(0, 0, EMOJI_SIZE, EMOJI_SIZE).data;
-    emojiCache.set(emoji, data);
+    tex = { data: ctx.getImageData(0, 0, EMOJI_SIZE, EMOJI_SIZE).data, w: EMOJI_SIZE, h: EMOJI_SIZE };
+    spriteCache.set(emoji, tex);
   }
-  return data;
+  return tex;
+}
+
+/** Pixel-art sprite from a PNG data URL. Decodes in the background; null until ready. */
+function imageTexture(url: string): SpriteTexture | null {
+  const cached = spriteCache.get(url);
+  if (cached) return cached === 'loading' ? null : cached;
+  spriteCache.set(url, 'loading');
+  const img = new Image();
+  img.onload = () => {
+    const canvas = document.createElement('canvas');
+    canvas.width = img.width;
+    canvas.height = img.height;
+    const ctx = canvas.getContext('2d', { willReadFrequently: true })!;
+    ctx.drawImage(img, 0, 0);
+    spriteCache.set(url, { data: ctx.getImageData(0, 0, img.width, img.height).data, w: img.width, h: img.height });
+  };
+  img.src = url;
+  return null;
 }
 
 const PUDDLE_SIZE = 128;

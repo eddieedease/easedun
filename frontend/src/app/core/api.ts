@@ -1,7 +1,7 @@
 import { HttpClient, HttpInterceptorFn, HttpParams } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
-import { Level, LevelInput, LevelSummary, User } from './models';
+import { EnemyDef, EnemyInput, Level, LevelInput, LevelSummary, User } from './models';
 
 /** Routes go through ?r= so the PHP API works on hosts without URL rewriting. */
 const API = 'api/index.php';
@@ -52,6 +52,22 @@ export class Api {
 
   deleteLevel(id: number) {
     return this.send<{ ok: true }>('DELETE', `/levels/${id}`);
+  }
+
+  enemies() {
+    return this.get<EnemyDef[]>('/enemies');
+  }
+
+  createEnemy(input: EnemyInput) {
+    return this.send<EnemyDef>('POST', '/enemies', input);
+  }
+
+  updateEnemy(id: number, input: EnemyInput) {
+    return this.send<EnemyDef>('PUT', `/enemies/${id}`, input);
+  }
+
+  deleteEnemy(id: number) {
+    return this.send<{ ok: true }>('DELETE', `/enemies/${id}`);
   }
 }
 

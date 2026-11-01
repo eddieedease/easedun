@@ -52,6 +52,9 @@ function validate_level_data(mixed $data): array
         $a['name'] = mb_substr((string)($a['name'] ?? ''), 0, 80);
         $a['sprite'] = mb_substr((string)($a['sprite'] ?? ''), 0, 8);
         $a['dialogue'] = array_values(array_filter($a['dialogue'], 'is_array'));
+        if (isset($a['enemyRef'])) {
+            $a['enemyRef'] = (int)$a['enemyRef'];
+        }
         $actors[$a['id']] = $a;
     }
     if (count($actors) > 500) {

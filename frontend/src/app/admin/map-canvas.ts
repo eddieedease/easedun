@@ -9,7 +9,7 @@ import {
   signal,
   viewChild,
 } from '@angular/core';
-import { LevelData } from '../core/models';
+import { EnemyDef, LevelData } from '../core/models';
 
 const ZOOMS = [4, 6, 8, 10, 12, 16, 20, 24, 32];
 
@@ -56,6 +56,11 @@ export const CELL_COLORS: Record<string, string> = {
 })
 export class MapCanvas {
   readonly data = input.required<LevelData>();
+  /** Bestiary enemies, so linked actors show their pixel sprite. */
+  readonly bestiary = input<EnemyDef[]>([]);
+  /** Bumped when a sprite image finishes loading. */
+  private readonly imagesLoaded = signal(0);
+  private readonly images = new Map<string, HTMLImageElement>();
   readonly paint = output<{ x: number; y: number; first: boolean }>();
 
   protected readonly zoomIndex = signal<number | null>(null);
@@ -72,8 +77,23 @@ export class MapCanvas {
 
   constructor() {
     afterRenderEffect(() => {
+      this.imagesLoaded();
       const ctx = this.canvas().nativeElement.getContext('2d');
-      if (ctx) draw(ctx, this.data(), this.cell());
+      const byId = new Map(this.bestiary().map((e) => [e.id, e]));
+      const image = (url: string) => {
+        let img = this.images.get(url);
+        if (!img) {
+          img = new Image();
+          img.onload = () => this.imagesLoaded.update((v) => v + 1);
+          img.src = url;
+          this.images.set(url, img);
+        }
+        return img.complete ? img : null;
+      };
+      if (ctx) draw(ctx, this.data(), this.cell(), (ref) => {
+        const e = ref ? byId.get(ref) : undefined;
+        return e ? image(e.image) : null;
+      });
     });
   }
 
@@ -105,7 +125,7 @@ export class MapCanvas {
   }
 }
 
-function draw(ctx: CanvasRenderingContext2D, d: LevelData, cell: number) {
+function draw(ctx: CanvasRenderingContext2D, d: LevelData, cell: number, spriteFor: (enemyRef?: number) => HTMLImageElement | null) {
   ctx.clearRect(0, 0, d.width * cell, d.height * cell);
   for (let y = 0; y < d.height; y++) {
     for (let x = 0; x < d.width; x++) {
@@ -142,7 +162,11 @@ function draw(ctx: CanvasRenderingContext2D, d: LevelData, cell: number) {
     const actor = sprites.get(p.actor);
     const cx = p.x * cell + cell / 2;
     const cy = p.y * cell + cell / 2;
-    if (cell >= 10 && actor) {
+    const img = actor ? spriteFor(actor.enemyRef) : null;
+    if (cell >= 10 && img) {
+      ctx.imageSmoothingEnabled = false;
+      ctx.drawImage(img, p.x * cell + 1, p.y * cell + 1, cell - 2, cell - 2);
+    } else if (cell >= 10 && actor) {
       ctx.fillText(actor.kind === 'trigger' ? '💬' : actor.sprite, cx, cy + 1);
     } else {
       ctx.fillStyle = actor?.kind === 'enemy' ? '#ff2b6a' : '#00f0ff';

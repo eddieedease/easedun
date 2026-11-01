@@ -1,5 +1,6 @@
 import { ChangeDetectionStrategy, Component, DestroyRef, WritableSignal, computed, effect, inject, input, signal, untracked } from '@angular/core';
 import { GameEngine } from './engine';
+import { Sprite } from './sprite';
 
 interface Floater {
   id: number;
@@ -15,6 +16,7 @@ interface Floater {
  */
 @Component({
   selector: 'app-battle-screen',
+  imports: [Sprite],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './battle-screen.html',
   styleUrl: './battle-screen.scss',
@@ -44,6 +46,10 @@ export class BattleScreen {
           this.float(`-${fx.amount}`, 'player', 'dmg');
         } else if (fx.type === 'heal' && this.battle()) {
           this.float(`+${fx.amount}`, 'player', 'heal');
+        } else if (fx.type === 'dodge') {
+          this.float('dodged!', 'enemy', 'miss');
+        } else if (fx.type === 'enemyHeal') {
+          this.float(`+${fx.amount}`, 'enemy', 'heal');
         } else if (fx.type === 'fail') {
           this.float('blocked!', 'player', 'miss');
         }

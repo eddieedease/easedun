@@ -29,6 +29,18 @@ function schema_statements(string $p): array
             updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
             CONSTRAINT {$p}levels_user_fk FOREIGN KEY (created_by) REFERENCES {$p}users(id) ON DELETE SET NULL
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4",
+
+        // v2: bestiary of reusable enemies with a pixel-art sprite (PNG data URL).
+        "CREATE TABLE IF NOT EXISTS {$p}enemies (
+            id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+            name VARCHAR(80) NOT NULL,
+            data TEXT NOT NULL,
+            image MEDIUMTEXT NOT NULL,
+            created_by INT UNSIGNED NULL,
+            created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            CONSTRAINT {$p}enemies_user_fk FOREIGN KEY (created_by) REFERENCES {$p}users(id) ON DELETE SET NULL
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4",
     ];
 }
 

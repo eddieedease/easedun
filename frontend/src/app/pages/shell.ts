@@ -12,7 +12,8 @@ import { Auth } from '../core/auth';
       <nav>
         <a routerLink="/" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">Play</a>
         @if (auth.adminView()) {
-          <a routerLink="/admin" routerLinkActive="active">Level editor</a>
+          <a routerLink="/admin" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">Level editor</a>
+          <a routerLink="/admin/enemies" routerLinkActive="active">Bestiary</a>
         }
       </nav>
       <span class="spacer"></span>

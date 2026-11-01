@@ -15,7 +15,7 @@ export interface LogEntry {
 /** Something the UI should react to with sound or animation. `seq` makes repeats distinct. */
 export interface GameFx {
   seq: number;
-  type: 'encounter' | 'playerHit' | 'enemyHit' | 'enemyDown' | 'playerDown' | 'pickup' | 'heal' | 'fled' | 'fail';
+  type: 'encounter' | 'playerHit' | 'enemyHit' | 'enemyDown' | 'playerDown' | 'pickup' | 'heal' | 'fled' | 'fail' | 'dodge' | 'enemyHeal' | 'crit';
   amount?: number;
 }
 
@@ -36,6 +36,8 @@ export interface Battle {
 export interface DialogueView {
   speaker: string;
   sprite: string;
+  /** Pixel-art sprite, when the speaker has one. */
+  image?: string;
   text: string;
   options: string[];
 }
@@ -196,24 +198,52 @@ export class GameEngine {
     if (!b) return;
     this.setPhase('busy');
     const enemy = b.enemy;
-    const dealt = this.rng.int(...this.attackPower());
+    const def = enemy.def;
+    const traits = def.traits ?? [];
+
+    if (traits.includes('evasive') && this.rng.next() < 0.25) {
+      this.say(`${def.name} dodges your attack!`, 'combat');
+      this.emit('dodge');
+      this.enemyTurn();
+      return;
+    }
+    const dealt = Math.max(1, this.rng.int(...this.attackPower()) - (def.defense ?? 0));
     enemy.hp = Math.max(0, enemy.hp - dealt);
     enemy.flashUntil = performance.now() + 220;
     this.worldVersion.update((v) => v + 1);
     this.emit('playerHit', dealt);
 
     if (enemy.hp > 0) {
-      this.say(`You hit ${enemy.def.name} for ${dealt}.`, 'combat');
+      this.say(`You hit ${def.name} for ${dealt}.`, 'combat');
+      if (traits.includes('cowardly') && enemy.hp <= (def.hp ?? 1) * 0.25) {
+        this.later(() => {
+          this.say(`${def.name} panics and runs off!`, 'combat');
+          this.emit('fled');
+          this.setPhase('fled');
+          this.removeActor(enemy);
+          this.later(() => this.battle.set(null), FLEE_MS);
+        }, RECOVER_MS);
+        return;
+      }
       this.enemyTurn();
       return;
     }
-    this.say(`You take down ${enemy.def.name} (${dealt} dmg).`, 'combat');
+    this.say(`You take down ${def.name} (${dealt} dmg).`, 'combat');
     this.later(() => {
       this.setPhase('won');
       this.emit('enemyDown');
       this.removeActor(enemy);
-      for (const drop of enemy.def.drops ?? []) this.gainItem(this.defs.get(drop));
-      if (enemy.def.defeatFlag) this.flags.update((f) => new Set(f).add(enemy.def.defeatFlag!));
+      if (def.defeatLine) this.say(def.defeatLine, 'story');
+      const [lo, hi] = def.creditDrop ?? [0, 0];
+      if (hi > 0) {
+        const loot = this.rng.int(lo, hi);
+        if (loot > 0) {
+          this.credits.update((c) => c + loot);
+          this.say(`You grab ${loot} credits.`, 'loot');
+        }
+      }
+      for (const drop of def.drops ?? []) this.gainItem(this.defs.get(drop));
+      if (def.defeatFlag) this.flags.update((f) => new Set(f).add(def.defeatFlag!));
       this.later(() => this.battle.set(null), VICTORY_MS);
     }, RECOVER_MS);
   }
@@ -276,6 +306,7 @@ export class GameEngine {
     this.battle.set({ enemy, phase: 'intro', ambush });
     this.emit('encounter');
     this.say(ambush ? `${enemy.def.name} jumps out of the shadows!` : `${enemy.def.name} squares up to you!`, 'hurt');
+    if (enemy.def.introLine) this.say(`${enemy.def.name}: "${enemy.def.introLine}"`, 'story');
     this.later(() => this.setPhase('menu'), INTRO_MS);
   }
 
@@ -284,12 +315,34 @@ export class GameEngine {
     this.later(() => {
       const b = this.battle();
       if (!b || this.status() !== 'playing') return;
-      const [lo, hi] = b.enemy.def.attack ?? [1, 3];
-      const hit = this.rng.int(lo, hi);
-      this.say(`${b.enemy.def.name} hits you for ${hit}.`, 'hurt');
+      const enemy = b.enemy;
+      const def = enemy.def;
+      const traits = def.traits ?? [];
+      const maxHp = def.hp ?? 1;
+      const [lo, hi] = def.attack ?? [1, 3];
+      let hit = this.rng.int(lo, hi);
+      if (traits.includes('brutal') && this.rng.next() < 0.2) {
+        hit *= 2;
+        this.say(`Critical hit!`, 'hurt');
+        this.emit('crit');
+      }
+      this.say(`${def.name} hits you for ${hit}.`, 'hurt');
       this.emit('enemyHit', hit);
       this.changeHp(-hit);
-      if (this.status() === 'playing') this.later(() => this.setPhase('menu'), RECOVER_MS);
+      if (this.status() !== 'playing') return;
+
+      let healed = 0;
+      if (traits.includes('leech')) healed += Math.floor(hit / 2);
+      if (traits.includes('regenerates')) healed += 2;
+      healed = Math.min(healed, maxHp - enemy.hp);
+      if (healed > 0) {
+        this.later(() => {
+          enemy.hp += healed;
+          this.say(`${def.name} recovers ${healed} HP.`, 'combat');
+          this.emit('enemyHeal', healed);
+        }, 160);
+      }
+      this.later(() => this.setPhase('menu'), RECOVER_MS + (healed > 0 ? 160 : 0));
     }, COUNTER_MS);
   }
 
@@ -368,6 +421,7 @@ export class GameEngine {
     this.dialogue.set({
       speaker: actor.def.name,
       sprite: actor.def.sprite,
+      image: actor.def.image,
       text: node.text,
       options: choices.length ? choices.map((c) => c.label) : ['[End]'],
     });

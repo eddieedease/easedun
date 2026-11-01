@@ -78,6 +78,46 @@ export interface ActorDef {
   attackBonus?: number;
   /** Credits added on pickup instead of going into the inventory. */
   credits?: number;
+  /** Bestiary enemy this actor is based on; its look and stats come from there. */
+  enemyRef?: number;
+  // Filled in from the bestiary at play time:
+  image?: string;
+  defense?: number;
+  traits?: EnemyTrait[];
+  creditDrop?: [number, number];
+  introLine?: string;
+  defeatLine?: string;
+}
+
+export type EnemyTrait = 'evasive' | 'brutal' | 'regenerates' | 'leech' | 'cowardly';
+
+/** Stats and flavour of a bestiary enemy. */
+export interface EnemyStats {
+  hp: number;
+  attack: [number, number];
+  defense: number;
+  credits: [number, number];
+  traits: EnemyTrait[];
+  intro: string;
+  defeat: string;
+  /** Sprite grid size in pixels. */
+  size: 16 | 32 | 64;
+}
+
+/** A reusable enemy from the bestiary, with a pixel-art sprite. */
+export interface EnemyDef {
+  id: number;
+  name: string;
+  data: EnemyStats;
+  /** PNG data URL. */
+  image: string;
+  updatedAt: string;
+}
+
+export interface EnemyInput {
+  name: string;
+  data: EnemyStats;
+  image: string;
 }
 
 export interface Placement {
@@ -121,6 +161,8 @@ export interface LevelSummary {
 
 export interface Level extends LevelSummary {
   data: LevelData;
+  /** Bestiary enemies this level refers to. */
+  enemies?: EnemyDef[];
 }
 
 export interface LevelInput {

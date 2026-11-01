@@ -1,5 +1,6 @@
 import { ChangeDetectionStrategy, Component, DestroyRef, computed, effect, inject, input, output, signal } from '@angular/core';
 import { DialogueView } from './engine';
+import { Sprite } from './sprite';
 
 const CHARS_PER_TICK = 2;
 const TICK_MS = 16;
@@ -7,11 +8,12 @@ const TICK_MS = 16;
 /** Conversation / narration box with a typewriter effect and numbered choices. */
 @Component({
   selector: 'app-dialogue-box',
+  imports: [Sprite],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <div class="box" (click)="skip()">
       <div class="who">
-        <span class="sprite">{{ view().sprite }}</span>
+        <app-sprite class="sprite" [image]="view().image" [emoji]="view().sprite" />
         @if (view().speaker) {
           <span class="name">{{ view().speaker }}</span>
         }

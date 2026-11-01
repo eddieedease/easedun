@@ -84,6 +84,23 @@ opens, so conditional variants go above the default greeting. Each choice can:
 Flags tie it together: e.g. defeating Razor sets `razor_down`, handing Juno the chip sets `delivered`, and the
 exit requires `delivered`. The demo district *District 9: Neon Debt* shows all of this.
 
+### Bestiary (custom enemies)
+
+*Bestiary* in the admin menu holds reusable enemies, stored in the database:
+
+- **Sprite**: draw it in the pixel editor (16/32/64 grid, pencil, eraser, fill, eyedropper, mirror, undo) or
+  upload any picture, which is shrunk to the grid and turned into crisp pixel art. Saved as a small PNG.
+- **Stats**: HP, damage range, defense (damage blocked per hit) and a credit drop range.
+- **Traits**: *Evasive* (dodges 25%), *Brutal* (20% double-damage crits), *Regenerates* (+2 HP per turn),
+  *Leech* (heals half the damage it deals), *Cowardly* (runs away below 25% HP, no loot).
+- **Battle cry and last words**, shown in the feed when the fight starts and ends.
+
+In a district's *Characters & items* tab, *+ Enemy from bestiary…* adds one to the level. Look and stats always
+come from the bestiary (edit once, every level updates); hidden-ambusher, drops, defeat flag and dialogue are set
+per district. Place it on the map or put it in the random / encounter pools like any other actor.
+
+Existing installs upgrade themselves: the API creates the new table on first use (`settings.schema_version`).
+
 ### Randomized runs
 
 Each run is generated from the level and a **seed** (shown in game; replay one with `/play/<id>?seed=123`):

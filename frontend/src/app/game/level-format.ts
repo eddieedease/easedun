@@ -1,4 +1,4 @@
-import { ActorDef, ActorKind, LevelData } from '../core/models';
+import { ActorDef, ActorKind, EnemyDef, EnemyStats, EnemyTrait, LevelData } from '../core/models';
 import { THEMES } from './themes';
 
 export function newId(prefix: string) {
@@ -83,4 +83,45 @@ export function normalizeLevel(raw: unknown): LevelData {
     { actor: cache.id, weight: d['scenario']?.weights?.treasure ?? 2 },
   ];
   return level;
+}
+
+export const TRAIT_INFO: Record<EnemyTrait, { label: string; hint: string }> = {
+  evasive: { label: 'Evasive', hint: 'Dodges a quarter of your attacks.' },
+  brutal: { label: 'Brutal', hint: '20% chance of a double-damage critical hit.' },
+  regenerates: { label: 'Regenerates', hint: 'Heals 2 HP after each of its turns.' },
+  leech: { label: 'Leech', hint: 'Heals for half the damage it deals.' },
+  cowardly: { label: 'Cowardly', hint: 'Runs away below 25% HP (no loot).' },
+};
+
+export function defaultEnemyStats(): EnemyStats {
+  return { hp: 12, attack: [2, 5], defense: 0, credits: [0, 5], traits: [], intro: '', defeat: '', size: 32 };
+}
+
+/** A level actor that stands for a bestiary enemy. */
+export function actorFromEnemy(enemy: EnemyDef): ActorDef {
+  return { ...newActor('enemy'), name: enemy.name, sprite: '👾', enemyRef: enemy.id, dialogue: [] };
+}
+
+/** Copies look and stats from the bestiary onto actors that refer to it (for play). */
+export function applyBestiary(level: LevelData, enemies: EnemyDef[] = []): LevelData {
+  const byId = new Map(enemies.map((e) => [e.id, e]));
+  return {
+    ...level,
+    actors: level.actors.map((a) => {
+      const e = a.enemyRef ? byId.get(a.enemyRef) : undefined;
+      if (!e) return a;
+      return {
+        ...a,
+        name: e.name,
+        image: e.image,
+        hp: e.data.hp,
+        attack: e.data.attack,
+        defense: e.data.defense,
+        traits: e.data.traits,
+        creditDrop: e.data.credits,
+        introLine: e.data.intro,
+        defeatLine: e.data.defeat,
+      };
+    }),
+  };
 }

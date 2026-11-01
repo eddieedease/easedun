@@ -1,7 +1,9 @@
 import { ChangeDetectionStrategy, Component, computed, input, output } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { ActorDef, ActorKind } from '../core/models';
-import { KIND_LABELS } from '../game/level-format';
+import { ActorDef, ActorKind, EnemyDef } from '../core/models';
+import { RouterLink } from '@angular/router';
+import { KIND_LABELS, TRAIT_INFO } from '../game/level-format';
+import { Sprite } from '../game/sprite';
 import { DialogueEditor } from './dialogue-editor';
 
 const SPRITES: Record<ActorKind, string[]> = {
@@ -23,12 +25,12 @@ const KIND_HINTS: Record<ActorKind, string> = {
 /** Edits one actor definition in place and emits `changed` after each edit. */
 @Component({
   selector: 'app-actor-editor',
-  imports: [FormsModule, DialogueEditor],
+  imports: [FormsModule, DialogueEditor, RouterLink, Sprite],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     @let a = actor();
     <div class="head">
-      <span class="sprite">{{ a.sprite }}</span>
+      <span class="sprite"><app-sprite [image]="linked()?.image" [emoji]="a.sprite" /></span>
       <div class="grow">
         <input class="name" [(ngModel)]="a.name" (ngModelChange)="touch()" aria-label="Name" />
         <small>{{ kindLabels[a.kind] }} · id <code>{{ a.id }}</code></small>
@@ -37,7 +39,17 @@ const KIND_HINTS: Record<ActorKind, string> = {
     </div>
     <p class="hint">{{ kindHints[a.kind] }}</p>
 
-    @if (a.kind !== 'trigger') {
+    @if (linked(); as e) {
+      <div class="linked">
+        <span>From the bestiary: <strong>{{ e.name }}</strong> · HP {{ e.data.hp }} · DMG {{ e.data.attack[0] }}–{{ e.data.attack[1] }}@if (e.data.defense) { · DEF {{ e.data.defense }} }</span>
+        @for (t of e.data.traits; track t) { <span class="trait">{{ traitInfo[t].label }}</span> }
+        <a [routerLink]="['/admin/enemies', e.id]">Edit look &amp; stats →</a>
+      </div>
+    } @else if (a.enemyRef) {
+      <p class="hint">This enemy was deleted from the bestiary; it plays as a placeholder.</p>
+    }
+
+    @if (a.kind !== 'trigger' && !a.enemyRef) {
       <div class="sprites">
         @for (s of sprites[a.kind]; track s) {
           <button class="pick" [class.active]="a.sprite === s" (click)="a.sprite = s; touch()">{{ s }}</button>
@@ -48,9 +60,11 @@ const KIND_HINTS: Record<ActorKind, string> = {
 
     @if (a.kind === 'enemy') {
       <div class="fields">
-        <label>HP <input type="number" min="1" [(ngModel)]="a.hp" (ngModelChange)="touch()" /></label>
-        <label>Damage min <input type="number" min="0" [ngModel]="a.attack?.[0] ?? 1" (ngModelChange)="setAttack(0, +$event)" /></label>
-        <label>Damage max <input type="number" min="0" [ngModel]="a.attack?.[1] ?? 3" (ngModelChange)="setAttack(1, +$event)" /></label>
+        @if (!a.enemyRef) {
+          <label>HP <input type="number" min="1" [(ngModel)]="a.hp" (ngModelChange)="touch()" /></label>
+          <label>Damage min <input type="number" min="0" [ngModel]="a.attack?.[0] ?? 1" (ngModelChange)="setAttack(0, +$event)" /></label>
+          <label>Damage max <input type="number" min="0" [ngModel]="a.attack?.[1] ?? 3" (ngModelChange)="setAttack(1, +$event)" /></label>
+        }
         <label>Flag on defeat <input [(ngModel)]="a.defeatFlag" (ngModelChange)="touch()" placeholder="e.g. razor_down" /></label>
         <label class="check" title="Invisible until the player walks into it, then attacks"><input type="checkbox" [(ngModel)]="a.hostile" (ngModelChange)="touch()" /> Hidden ambusher</label>
       </div>
@@ -94,11 +108,21 @@ const KIND_HINTS: Record<ActorKind, string> = {
     .check { flex-direction: row !important; align-items: center; gap: 6px; color: var(--text); }
     .drops { display: flex; flex-wrap: wrap; gap: 4px 12px; align-items: center; font-size: .9em; }
     h3 { margin-top: 8px; font-size: .9rem; }
+    .sprite app-sprite { font-size: 36px; }
+    .linked { display: flex; flex-wrap: wrap; gap: 6px 10px; align-items: center; padding: 6px 8px; border: 1px dashed var(--neon-cyan); font-size: .9em; }
+    .linked .trait { color: var(--neon-yellow); border: 1px solid rgba(245, 240, 0, 0.4); padding: 0 4px; font-size: .8em; }
   `,
 })
 export class ActorEditor {
   readonly actor = input.required<ActorDef>();
   readonly actors = input.required<ActorDef[]>();
+  readonly bestiary = input<EnemyDef[]>([]);
+  /** The bestiary enemy this actor is based on, if any. */
+  protected readonly linked = computed(() => {
+    const ref = this.actor().enemyRef;
+    return ref ? (this.bestiary().find((e) => e.id === ref) ?? null) : null;
+  });
+  protected readonly traitInfo = TRAIT_INFO;
   readonly changed = output<void>();
   readonly remove = output<void>();
 

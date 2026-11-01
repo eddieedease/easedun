@@ -45,7 +45,7 @@
             <div class="actor-picks">
               @for (a of data().actors; track a.id) {
                 <button class="pick" [class.active]="tool() === 'place' && selectedActor() === a.id" (click)="placeTool(a.id)" [title]="a.name">
-                  <span>{{ a.kind === 'trigger' ? '💬' : a.sprite }}</span>
+                  <span><app-sprite [image]="img(a)" [emoji]="a.kind === 'trigger' ? '💬' : a.sprite" /></span>
                   <small>{{ a.name }}</small>
                 </button>
               } @empty {
@@ -71,7 +71,7 @@
             @for (a of data().actors; track a.id) {
               @if (a.kind !== 'trigger') {
                 <label class="pool">
-                  <span>{{ a.sprite }} {{ a.name }}</span>
+                  <span><app-sprite [image]="img(a)" [emoji]="a.sprite" /> {{ a.name }}</span>
                   <input type="number" min="0" max="50" [ngModel]="poolWeight(a.id)" (ngModelChange)="setPoolWeight(a.id, +$event)" />
                 </label>
               }
@@ -83,7 +83,7 @@
             <p class="hint">Like tall grass: enemies appear out of nowhere while walking, so streets never stay empty. A few safe steps follow every fight. Weights (0 = never):</p>
             @for (a of ofKind('enemy'); track a.id) {
               <label class="pool">
-                <span>{{ a.sprite }} {{ a.name }}</span>
+                <span><app-sprite [image]="img(a)" [emoji]="a.sprite" /> {{ a.name }}</span>
                 <input type="number" min="0" max="50" [ngModel]="encounterWeight(a.id)" (ngModelChange)="setEncounterWeight(a.id, +$event)" />
               </label>
             } @empty {
@@ -92,7 +92,7 @@
           </aside>
 
           <section class="panel canvas-panel">
-            <app-map-canvas [data]="data()" (paint)="paint($event)" />
+            <app-map-canvas [data]="data()" [bestiary]="bestiaryList()" (paint)="paint($event)" />
             <p class="hint">
               Starts {{ counts().S }} · Exits {{ counts().E }} · Random spots {{ counts().R }} · Placed {{ data().placements.length }}
               — each run picks one random start and one random exit.
@@ -109,6 +109,10 @@
               @for (k of kinds; track k) {
                 <button class="btn mini" (click)="addActor(k)">+ {{ kindLabels[k] }}</button>
               }
+              <select class="from-bestiary" [ngModel]="''" (ngModelChange)="addFromBestiary(+$event)" title="Add an enemy from the bestiary">
+                <option value="">+ Enemy from bestiary…</option>
+                @for (e of bestiaryList(); track e.id) { <option [value]="e.id">{{ e.name }} (HP {{ e.data.hp }})</option> }
+              </select>
             </div>
             @for (k of kinds; track k) {
               @let group = ofKind(k);
@@ -116,7 +120,7 @@
                 <h3>{{ kindLabels[k] }}</h3>
                 @for (a of group; track a.id) {
                   <button class="row" [class.active]="selectedActor() === a.id" (click)="selectedActor.set(a.id)">
-                    <span>{{ a.kind === 'trigger' ? '💬' : a.sprite }}</span>
+                    <span><app-sprite [image]="img(a)" [emoji]="a.kind === 'trigger' ? '💬' : a.sprite" /></span>
                     <span class="grow">{{ a.name }}</span>
                     <small>{{ placedCount(a.id) }}× on map</small>
                   </button>
@@ -126,7 +130,7 @@
           </aside>
           <section class="panel">
             @if (current(); as actor) {
-              <app-actor-editor [actor]="actor" [actors]="data().actors" (changed)="touch()" (remove)="removeActor(actor.id)" />
+              <app-actor-editor [actor]="actor" [actors]="data().actors" [bestiary]="bestiaryList()" (changed)="touch()" (remove)="removeActor(actor.id)" />
               <button class="btn" (click)="placeTool(actor.id); tab.set('map')">Place on map →</button>
             } @else {
               <p class="hint">Pick something from the library, or create a new character, enemy, item, terminal or story trigger.</p>

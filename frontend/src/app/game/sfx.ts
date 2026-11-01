@@ -60,6 +60,15 @@ export class Sfx {
       case 'fled':
         this.tone(600, 1400, 0.18, 'square', 0.08);
         break;
+      case 'dodge':
+        this.tone(900, 300, 0.12, 'triangle', 0.1);
+        break;
+      case 'enemyHeal':
+        this.tone(300, 520, 0.18, 'triangle', 0.08);
+        break;
+      case 'crit':
+        this.tone(1500, 200, 0.2, 'sawtooth', 0.12);
+        break;
       case 'fail':
         this.tone(220, 200, 0.15, 'square', 0.12);
         break;

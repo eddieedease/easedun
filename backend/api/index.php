@@ -31,6 +31,8 @@ if (!is_installed()) {
     fail(503, 'not_installed', 'The application is not installed yet.');
 }
 
+ensure_schema();
+
 $routes = [
     ['POST', '#^/auth/login$#', 'login'],
     ['POST', '#^/auth/logout$#', 'logout'],
@@ -40,6 +42,10 @@ $routes = [
     ['POST', '#^/levels$#', 'create_level'],
     ['PUT', '#^/levels/(\d+)$#', 'update_level'],
     ['DELETE', '#^/levels/(\d+)$#', 'delete_level'],
+    ['GET', '#^/enemies$#', 'list_enemies'],
+    ['POST', '#^/enemies$#', 'create_enemy'],
+    ['PUT', '#^/enemies/(\d+)$#', 'update_enemy'],
+    ['DELETE', '#^/enemies/(\d+)$#', 'delete_enemy'],
 ];
 
 foreach ($routes as [$m, $pattern, $handler]) {
@@ -104,7 +110,9 @@ function get_level(int $id): never
     if (!$row['published'] && $user['role'] !== 'admin') {
         fail(404, 'not_found', 'Level not found.');
     }
-    json_response(level_row_to_json($row, true));
+    $level = level_row_to_json($row, true);
+    $level['enemies'] = enemies_for_level($level['data'] ?? []);
+    json_response($level);
 }
 
 function level_fields(array $body): array
@@ -145,5 +153,46 @@ function delete_level(int $id): never
     require_admin();
     find_level($id);
     db()->prepare('DELETE FROM ' . t('levels') . ' WHERE id = ?')->execute([$id]);
+    json_response(['ok' => true]);
+}
+
+// ---- bestiary -------------------------------------------------------------
+
+function list_enemies(): never
+{
+    require_admin();
+    $rows = db()->query('SELECT * FROM ' . t('enemies') . ' ORDER BY name')->fetchAll();
+    json_response(array_map('enemy_row_to_json', $rows));
+}
+
+function find_enemy(int $id): array
+{
+    $stmt = db()->prepare('SELECT * FROM ' . t('enemies') . ' WHERE id = ?');
+    $stmt->execute([$id]);
+    return $stmt->fetch() ?: fail(404, 'not_found', 'Enemy not found.');
+}
+
+function create_enemy(): never
+{
+    $user = require_admin();
+    $fields = validate_enemy(json_body());
+    db()->prepare('INSERT INTO ' . t('enemies') . ' (name, data, image, created_by) VALUES (?, ?, ?, ?)')->execute([...$fields, $user['id']]);
+    json_response(enemy_row_to_json(find_enemy((int)db()->lastInsertId())), 201);
+}
+
+function update_enemy(int $id): never
+{
+    require_admin();
+    find_enemy($id);
+    $fields = validate_enemy(json_body());
+    db()->prepare('UPDATE ' . t('enemies') . ' SET name = ?, data = ?, image = ? WHERE id = ?')->execute([...$fields, $id]);
+    json_response(enemy_row_to_json(find_enemy($id)));
+}
+
+function delete_enemy(int $id): never
+{
+    require_admin();
+    find_enemy($id);
+    db()->prepare('DELETE FROM ' . t('enemies') . ' WHERE id = ?')->execute([$id]);
     json_response(['ok' => true]);
 }

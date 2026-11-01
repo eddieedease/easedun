@@ -21,7 +21,8 @@ import { BattleScreen } from '../game/battle-screen';
 import { CityView } from '../game/city-view';
 import { DialogueBox } from '../game/dialogue-box';
 import { GameEngine } from '../game/engine';
-import { KIND_LABELS, normalizeLevel } from '../game/level-format';
+import { KIND_LABELS, applyBestiary, normalizeLevel } from '../game/level-format';
+import { Sprite } from '../game/sprite';
 import { randomSeed } from '../game/rng';
 import { Sfx } from '../game/sfx';
 
@@ -46,7 +47,7 @@ const KEYS: Record<string, Command> = {
 
 @Component({
   selector: 'app-play',
-  imports: [CityView, Automap, DialogueBox, BattleScreen, RouterLink],
+  imports: [CityView, Automap, DialogueBox, BattleScreen, RouterLink, Sprite],
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: {
     '(document:keydown)': 'onKey($event)',
@@ -71,7 +72,7 @@ export class PlayPage {
     params: () => ({ id: this.id() }),
     loader: async ({ params }) => {
       const level = await this.api.level(params.id);
-      return { ...level, data: normalizeLevel(level.data) };
+      return { ...level, data: applyBestiary(normalizeLevel(level.data), level.enemies) };
     },
   });
 

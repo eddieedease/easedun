@@ -1,0 +1,64 @@
+.head { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; margin-bottom: 8px; h1 { margin: 0; } }
+.spacer { flex: 1; }
+.unsaved { color: var(--neon-yellow); font-size: .85em; }
+.ok { color: var(--good); }
+.hint { color: var(--muted); font-size: .85em; margin: 4px 0; }
+
+.layout { display: grid; grid-template-columns: minmax(0, 420px) minmax(0, 1fr); gap: 12px; align-items: start; }
+@media (max-width: 860px) { .layout { grid-template-columns: 1fr; } }
+
+.panel { display: flex; flex-direction: column; gap: 8px; }
+.panel-title.sub { margin: 8px -10px 0; }
+label { display: flex; flex-direction: column; font-size: .9em; }
+.size { flex-direction: row; align-items: center; gap: 8px; }
+.fields { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 6px; }
+
+.traits { display: grid; gap: 4px; }
+.trait {
+  flex-direction: row;
+  align-items: baseline;
+  gap: 8px;
+  padding: 4px 6px;
+  border: 1px solid var(--edge);
+  color: var(--text);
+  cursor: pointer;
+  &.on { border-color: var(--neon-yellow); }
+  strong { color: var(--neon-yellow); font-weight: normal; min-width: 96px; }
+  small { color: var(--muted); }
+}
+
+.preview {
+  position: relative;
+  height: 220px;
+  background:
+    radial-gradient(ellipse at 68% 55%, rgba(255, 43, 214, 0.25), transparent 55%),
+    linear-gradient(180deg, #120a24, #05040b);
+  border: 1px solid var(--edge-light);
+  overflow: hidden;
+  img {
+    position: absolute;
+    right: 12%;
+    top: 12%;
+    height: 70%;
+    image-rendering: pixelated;
+    filter: drop-shadow(0 0 12px rgba(0, 240, 255, 0.55));
+    animation: idle 1.6s ease-in-out infinite;
+  }
+  .empty { position: absolute; right: 16%; top: 45%; color: var(--muted); }
+}
+
+.plate {
+  position: absolute;
+  left: 4%;
+  top: 8%;
+  min-width: 40%;
+  padding: 4px 10px;
+  background: rgba(8, 6, 20, 0.88);
+  border: 1px solid var(--neon-pink);
+  span { color: var(--neon-pink); font-family: var(--font-display); font-size: .8em; letter-spacing: .1em; }
+  small { color: var(--muted); }
+  .bar { height: 7px; margin: 3px 0; border: 1px solid rgba(255, 43, 106, 0.6); }
+  .bar span { display: block; height: 100%; width: 100%; background: var(--danger); }
+}
+
+@keyframes idle { 50% { transform: translateY(-3%) scale(1.02); } }
