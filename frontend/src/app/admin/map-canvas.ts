@@ -9,7 +9,7 @@ import {
   signal,
   viewChild,
 } from '@angular/core';
-import { EnemyDef, LevelData } from '../core/models';
+import { ActorDef, EnemyDef, LevelData } from '../core/models';
 
 const ZOOMS = [4, 6, 8, 10, 12, 16, 20, 24, 32];
 
@@ -90,9 +90,10 @@ export class MapCanvas {
         }
         return img.complete ? img : null;
       };
-      if (ctx) draw(ctx, this.data(), this.cell(), (ref) => {
-        const e = ref ? byId.get(ref) : undefined;
-        return e ? image(e.image) : null;
+      if (ctx) draw(ctx, this.data(), this.cell(), (actor) => {
+        const e = actor.enemyRef ? byId.get(actor.enemyRef) : undefined;
+        const url = e?.image ?? (actor.enemyRef ? '' : actor.image);
+        return url ? image(url) : null;
       });
     });
   }
@@ -125,7 +126,7 @@ export class MapCanvas {
   }
 }
 
-function draw(ctx: CanvasRenderingContext2D, d: LevelData, cell: number, spriteFor: (enemyRef?: number) => HTMLImageElement | null) {
+function draw(ctx: CanvasRenderingContext2D, d: LevelData, cell: number, spriteFor: (actor: ActorDef) => HTMLImageElement | null) {
   ctx.clearRect(0, 0, d.width * cell, d.height * cell);
   for (let y = 0; y < d.height; y++) {
     for (let x = 0; x < d.width; x++) {
@@ -162,7 +163,7 @@ function draw(ctx: CanvasRenderingContext2D, d: LevelData, cell: number, spriteF
     const actor = sprites.get(p.actor);
     const cx = p.x * cell + cell / 2;
     const cy = p.y * cell + cell / 2;
-    const img = actor ? spriteFor(actor.enemyRef) : null;
+    const img = actor ? spriteFor(actor) : null;
     if (cell >= 10 && img) {
       ctx.imageSmoothingEnabled = false;
       ctx.drawImage(img, p.x * cell + 1, p.y * cell + 1, cell - 2, cell - 2);

@@ -5,6 +5,20 @@ const ENEMY_TRAITS = ['evasive', 'brutal', 'regenerates', 'leech', 'cowardly'];
 const MAX_SPRITE_BYTES = 65536;
 const MAX_SPRITE_SIZE = 128;
 
+/** True for a PNG data URL of at most 128x128 pixels and 64 KB (pixel-art sprites). */
+function is_valid_sprite(string $image): bool
+{
+    if (!preg_match('#^data:image/png;base64,([A-Za-z0-9+/=]+)$#', $image, $m)) {
+        return false;
+    }
+    $png = base64_decode($m[1], true);
+    if ($png === false || strlen($png) > MAX_SPRITE_BYTES) {
+        return false;
+    }
+    $info = @getimagesizefromstring($png);
+    return $info && $info[2] === IMAGETYPE_PNG && $info[0] <= MAX_SPRITE_SIZE && $info[1] <= MAX_SPRITE_SIZE;
+}
+
 /** Validates an enemy from the bestiary editor. Returns [name, data JSON, image data URL]. */
 function validate_enemy(array $body): array
 {
@@ -15,16 +29,8 @@ function validate_enemy(array $body): array
     }
 
     $image = (string)($body['image'] ?? '');
-    if (!preg_match('#^data:image/png;base64,([A-Za-z0-9+/=]+)$#', $image, $m)) {
-        $bad('The sprite must be a PNG image.');
-    }
-    $png = base64_decode($m[1], true);
-    if ($png === false || strlen($png) > MAX_SPRITE_BYTES) {
-        $bad('The sprite image is too large.');
-    }
-    $info = @getimagesizefromstring($png);
-    if (!$info || $info[2] !== IMAGETYPE_PNG || $info[0] > MAX_SPRITE_SIZE || $info[1] > MAX_SPRITE_SIZE) {
-        $bad('The sprite must be a PNG of at most 128x128 pixels.');
+    if (!is_valid_sprite($image)) {
+        $bad('The sprite must be a PNG of at most 128x128 pixels and 64 KB.');
     }
 
     $d = is_array($body['data'] ?? null) ? $body['data'] : [];

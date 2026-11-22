@@ -80,8 +80,11 @@ export interface ActorDef {
   credits?: number;
   /** Bestiary enemy this actor is based on; its look and stats come from there. */
   enemyRef?: number;
-  // Filled in from the bestiary at play time:
+  /** Pixel-art sprite (PNG data URL): drawn in the level editor, or filled in from the bestiary at play time. */
   image?: string;
+  /** Grid size of a sprite drawn in the level editor. */
+  imageSize?: 16 | 32 | 64;
+  // Filled in from the bestiary at play time:
   defense?: number;
   traits?: EnemyTrait[];
   creditDrop?: [number, number];

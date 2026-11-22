@@ -238,9 +238,9 @@ export class LevelEditorPage {
     this.dirty.set(true);
   }
 
-  /** Pixel sprite for actors based on a bestiary enemy. */
+  /** Pixel sprite: from the bestiary, or drawn for this actor. */
   protected img(a: ActorDef) {
-    return a.enemyRef ? (this.bestiaryById().get(a.enemyRef)?.image ?? '') : '';
+    return a.enemyRef ? (this.bestiaryById().get(a.enemyRef)?.image ?? '') : (a.image ?? '');
   }
 
   protected addFromBestiary(id: number) {

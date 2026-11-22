@@ -5,6 +5,7 @@ import { RouterLink } from '@angular/router';
 import { KIND_LABELS, TRAIT_INFO } from '../game/level-format';
 import { Sprite } from '../game/sprite';
 import { DialogueEditor } from './dialogue-editor';
+import { PixelEditor } from './pixel-editor';
 
 const SPRITES: Record<ActorKind, string[]> = {
   npc: ['🧑‍🎤', '👩‍💻', '🧔', '👮', '🕵️', '🧑‍🔧', '👵', '🧙', '💃', '🥷'],
@@ -25,12 +26,12 @@ const KIND_HINTS: Record<ActorKind, string> = {
 /** Edits one actor definition in place and emits `changed` after each edit. */
 @Component({
   selector: 'app-actor-editor',
-  imports: [FormsModule, DialogueEditor, RouterLink, Sprite],
+  imports: [FormsModule, DialogueEditor, RouterLink, Sprite, PixelEditor],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     @let a = actor();
     <div class="head">
-      <span class="sprite"><app-sprite [image]="linked()?.image" [emoji]="a.sprite" /></span>
+      <span class="sprite"><app-sprite [image]="linked()?.image || a.image" [emoji]="a.sprite" /></span>
       <div class="grow">
         <input class="name" [(ngModel)]="a.name" (ngModelChange)="touch()" aria-label="Name" />
         <small>{{ kindLabels[a.kind] }} · id <code>{{ a.id }}</code></small>
@@ -55,6 +56,24 @@ const KIND_HINTS: Record<ActorKind, string> = {
           <button class="pick" [class.active]="a.sprite === s" (click)="a.sprite = s; touch()">{{ s }}</button>
         }
         <input class="custom" [(ngModel)]="a.sprite" (ngModelChange)="touch()" maxlength="8" title="Any emoji" aria-label="Custom sprite" />
+      </div>
+      <div class="pixel">
+        @if (a.image !== undefined) {
+          <div class="pixel-head">
+            <span>Pixel sprite <small>(used instead of the emoji)</small></span>
+            <label>Grid
+              <select [ngModel]="a.imageSize ?? 32" (ngModelChange)="setImageSize(+$event)">
+                <option [ngValue]="16">16 × 16</option>
+                <option [ngValue]="32">32 × 32</option>
+                <option [ngValue]="64">64 × 64</option>
+              </select>
+            </label>
+            <button class="btn mini danger" (click)="removeImage()">Use emoji instead</button>
+          </div>
+          <app-pixel-editor [size]="a.imageSize ?? 32" [value]="a.image ?? ''" (changed)="setImage($event)" />
+        } @else {
+          <button class="btn" (click)="startImage()">🎨 Draw or upload a pixel sprite</button>
+        }
       </div>
     }
 
@@ -100,6 +119,11 @@ const KIND_HINTS: Record<ActorKind, string> = {
     code { color: var(--neon-yellow); }
     .hint { color: var(--muted); font-size: .85em; margin: 0; }
     .sprites { display: flex; flex-wrap: wrap; gap: 4px; align-items: center; }
+    .pixel { display: flex; flex-direction: column; gap: 6px; max-width: 420px; }
+    .pixel-head { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+    .pixel-head small { color: var(--muted); }
+    .pixel-head label { flex-direction: row; display: flex; gap: 6px; align-items: center; font-size: .85em; }
+    .btn.mini { padding: 0 8px; font-size: .85em; }
     .pick { font-size: 22px; background: var(--panel-dark); border: 1px solid var(--edge-light); cursor: pointer; padding: 2px 4px; }
     .pick.active { border-color: var(--neon-cyan); box-shadow: 0 0 8px rgba(0, 240, 255, 0.5); }
     .custom { width: 70px; font-size: 18px; }
@@ -140,6 +164,30 @@ export class ActorEditor {
     const attack: [number, number] = [...(a.attack ?? [1, 3])];
     attack[i] = value;
     a.attack = attack;
+    this.touch();
+  }
+
+  protected startImage() {
+    const a = this.actor();
+    a.image = '';
+    a.imageSize = a.imageSize ?? 32;
+    this.touch();
+  }
+
+  protected setImage(url: string) {
+    this.actor().image = url;
+    this.touch();
+  }
+
+  protected setImageSize(size: number) {
+    this.actor().imageSize = size === 16 || size === 64 ? size : 32;
+    this.touch();
+  }
+
+  protected removeImage() {
+    const a = this.actor();
+    delete a.image;
+    delete a.imageSize;
     this.touch();
   }
 

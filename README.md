@@ -70,6 +70,10 @@ The editor has three tabs:
   - *Item*: picked up on step; can heal, add attack, or give credits. Story items (keys, passes) need no numbers.
   - *Terminal / sign*: an object to read or use.
   - *Story trigger*: invisible; its text plays once when the player steps on the cell.
+
+  Characters, items, terminals and enemies made in the level can also get a **pixel sprite**: click
+  *🎨 Draw or upload a pixel sprite* in their panel for the same pixel editor and uploader as the bestiary.
+  The sprite is saved with the level and replaces the emoji everywhere in the game.
 - **Story & theme**: intro briefing, outro, an optional flag the exit requires (with a "locked" message), and the
   visual theme (Neon night, Acid rain, Corpo plaza, Rust slums).
 

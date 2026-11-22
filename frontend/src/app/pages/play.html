@@ -21,7 +21,7 @@
         @for (item of game.inventory(); track $index) {
           <button class="slot" (click)="game.useItem($index)"
                   [title]="item.name + (item.heal ? ' — use to heal ' + item.heal : item.attackBonus ? ' — +' + item.attackBonus + ' attack' : '')">
-            {{ item.sprite }}<small>{{ $index + 1 }}</small>
+            <app-sprite [image]="item.image" [emoji]="item.sprite" /><small>{{ $index + 1 }}</small>
           </button>
         }
         @for (empty of emptySlots(); track $index) {

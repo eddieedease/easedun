@@ -55,6 +55,12 @@ function validate_level_data(mixed $data): array
         if (isset($a['enemyRef'])) {
             $a['enemyRef'] = (int)$a['enemyRef'];
         }
+        // Custom pixel sprite drawn in the level editor. Bestiary enemies get theirs at play time.
+        if (isset($a['enemyRef']) || !is_valid_sprite((string)($a['image'] ?? ''))) {
+            unset($a['image'], $a['imageSize']);
+        } else {
+            $a['imageSize'] = in_array((int)($a['imageSize'] ?? 32), [16, 32, 64], true) ? (int)($a['imageSize'] ?? 32) : 32;
+        }
         $actors[$a['id']] = $a;
     }
     if (count($actors) > 500) {
