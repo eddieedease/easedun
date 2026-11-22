@@ -34,15 +34,15 @@ const TICK_MS = 16;
   `,
   styles: `
     .box {
-      background: rgba(6, 4, 16, 0.92);
+      background: rgba(16, 17, 20, 0.92);
       border-top: 1px solid var(--neon-pink);
-      box-shadow: 0 -6px 24px rgba(255, 43, 214, 0.25);
+      box-shadow: 0 -6px 24px rgba(232, 112, 74, 0.25);
       padding: 12px 16px 14px;
       max-height: 100%;
       overflow: auto;
     }
     .who { display: flex; align-items: center; gap: 10px; margin-bottom: 6px; }
-    .sprite { font-size: 30px; line-height: 1; filter: drop-shadow(0 0 6px rgba(0, 240, 255, 0.6)); }
+    .sprite { font-size: 30px; line-height: 1; filter: drop-shadow(0 3px 0 rgba(0, 0, 0, 0.45)); }
     .name { font-family: var(--font-display); color: var(--neon-pink); letter-spacing: .1em; text-transform: uppercase; font-size: .85rem; }
     .text { margin: 0 0 10px; white-space: pre-line; min-height: 2.8em; }
     .caret { color: var(--neon-cyan); animation: blink .8s steps(2) infinite; }

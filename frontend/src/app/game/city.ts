@@ -123,7 +123,7 @@ function makeBuilding(theme: Theme, rng: Rng, kits: Kit[]): Building {
     kit: rng.pick(kits),
     heightPx,
     seed: rng.int(1, 0x7fffffff),
-    litPct: rng.int(12, 55),
+    litPct: Math.round(rng.int(12, 55) * theme.lit),
     litColors,
     sign,
   };
@@ -152,9 +152,10 @@ function painter(m: Module) {
 
 const shade = ([r, g, b]: RGB, f: number) => pack(r * f, g * f, b * f);
 
-function concrete(m: Module, base: RGB, rng: Rng) {
+function concrete(m: Module, base: RGB, rng: Rng, theme: Theme) {
+  const g = theme.grain;
   for (let i = 0; i < m.px.length; i++) {
-    const n = rng.int(-6, 6);
+    const n = rng.int(-g, g);
     m.px[i] = pack(base[0] + n, base[1] + n, base[2] + n);
   }
 }
@@ -163,11 +164,12 @@ function concrete(m: Module, base: RGB, rng: Rng) {
 function makeKit(theme: Theme, rng: Rng): Kit {
   const base = rng.pick(theme.concrete).map((c) => c + rng.int(-8, 8)) as RGB;
   const accent = rng.pick(theme.neon);
-  const glass = pack(12, 14, 26);
+  const glass = pack(...theme.glass);
+  const glassLight = shade(theme.glass, 1.35);
 
   // Upper storey: one of several window layouts.
   const storey = newModule(STOREY_PX);
-  concrete(storey, base, rng);
+  concrete(storey, base, rng, theme);
   const s = painter(storey);
   const layout = rng.int(0, 3);
   let slot = 1;
@@ -202,13 +204,19 @@ function makeKit(theme: Theme, rng: Rng): Kit {
   painter(roof).rect(0, 0, TEX_W, ROOF_PX, shade(base, 0.45));
   if (rng.next() < 0.3) painter(roof).rect(0, ROOF_PX - 1, TEX_W, 1, pack(...accent), 1);
 
-  return { grounds: [groundShop(base, accent, rng), groundShutter(base, rng), groundLobby(base, theme, rng), groundAlley(base, theme, rng)], storey, roof };
+  // Reflection streaks on the glass, then weathering.
+  for (let i = 0; i < storey.px.length; i++) {
+    if (storey.slot[i] && ((i % TEX_W) + Math.floor(i / TEX_W)) % 9 < 2) storey.px[i] = glassLight;
+  }
+  grime(storey, theme, rng, false);
+
+  return { grounds: [groundShop(base, accent, rng, theme), groundShutter(base, rng, theme), groundLobby(base, theme, rng), groundAlley(base, theme, rng)].map((g) => grime(g, theme, rng, true)), storey, roof };
 }
 
 /** Dark shop window, a lit door and a neon band at ~3.5 m. */
-function groundShop(base: RGB, accent: RGB, rng: Rng): Module {
+function groundShop(base: RGB, accent: RGB, rng: Rng, theme: Theme): Module {
   const m = newModule(GROUND_PX);
-  concrete(m, base, rng);
+  concrete(m, base, rng, theme);
   const p = painter(m);
   const top = GROUND_PX - Math.round(3 * M);
   p.rect(2, top, TEX_W - 4, Math.round(2.5 * M), pack(14, 14, 24));
@@ -223,9 +231,9 @@ function groundShop(base: RGB, accent: RGB, rng: Rng): Module {
 }
 
 /** Roll-down shutter with a small lit sign. */
-function groundShutter(base: RGB, rng: Rng): Module {
+function groundShutter(base: RGB, rng: Rng, theme: Theme): Module {
   const m = newModule(GROUND_PX);
-  concrete(m, base, rng);
+  concrete(m, base, rng, theme);
   const p = painter(m);
   const top = GROUND_PX - Math.round(3 * M);
   for (let y = top; y < GROUND_PX; y++) p.rect(3, y, TEX_W - 6, 1, (y - top) % 3 === 0 ? pack(55, 58, 66) : pack(88, 92, 100));
@@ -236,7 +244,7 @@ function groundShutter(base: RGB, rng: Rng): Module {
 /** Lit glass lobby with columns. */
 function groundLobby(base: RGB, theme: Theme, rng: Rng): Module {
   const m = newModule(GROUND_PX);
-  concrete(m, base, rng);
+  concrete(m, base, rng, theme);
   const p = painter(m);
   const light = rng.pick(theme.neon);
   const top = GROUND_PX - Math.round(3.6 * M);
@@ -251,7 +259,7 @@ function groundLobby(base: RGB, theme: Theme, rng: Rng): Module {
 /** Plain wall with a dim door and graffiti tags. */
 function groundAlley(base: RGB, theme: Theme, rng: Rng): Module {
   const m = newModule(GROUND_PX);
-  concrete(m, base, rng);
+  concrete(m, base, rng, theme);
   const p = painter(m);
   p.rect(rng.int(4, 40), GROUND_PX - Math.round(2.2 * M), Math.round(1.3 * M), Math.round(2.2 * M), pack(30, 26, 34));
   for (let t = 0; t < 3; t++) {
@@ -329,4 +337,56 @@ export function sampleFacade(b: Building, col: FaceColumn, face: number, tx: num
   }
   glowOut[0] = m.glow[i];
   return m.px[i];
+}
+
+/** Multiplies one texel's colour by f. */
+function darken(m: Module, i: number, f: number) {
+  const c = m.px[i];
+  m.px[i] = pack((c & 255) * f, ((c >> 8) & 255) * f, ((c >> 16) & 255) * f);
+}
+
+/**
+ * Weathering, scaled by the theme's grime: water streaks running down from windows,
+ * a few stains, and (on ground floors) a dirty base. Lit and window texels are left alone.
+ */
+function grime(m: Module, theme: Theme, rng: Rng, ground: boolean): Module {
+  const amount = theme.grime;
+  if (amount <= 0.02) return m;
+  const solid = (i: number) => !m.slot[i] && !m.glow[i];
+  // Streaks below the bottom edge of each window column.
+  for (let x = 0; x < TEX_W; x++) {
+    for (let y = 0; y < m.h - 1; y++) {
+      const i = y * TEX_W + x;
+      if (!m.slot[i] || m.slot[i + TEX_W] || rng.next() > amount) continue;
+      const len = Math.round(rng.int(3, 12) * amount);
+      for (let k = 1; k <= len && y + k < m.h; k++) {
+        const j = (y + k) * TEX_W + x;
+        if (solid(j)) darken(m, j, 0.78 + (k / len) * 0.2);
+      }
+    }
+  }
+  // Stains.
+  const stains = Math.round(amount * 4);
+  for (let n = 0; n < stains; n++) {
+    const cx = rng.int(0, TEX_W - 1);
+    const cy = rng.int(0, m.h - 1);
+    const r = rng.int(2, 5);
+    for (let y = cy - r; y <= cy + r; y++) {
+      for (let x = cx - r; x <= cx + r; x++) {
+        if (x < 0 || y < 0 || x >= TEX_W || y >= m.h || (x - cx) ** 2 + (y - cy) ** 2 > r * r) continue;
+        const i = y * TEX_W + x;
+        if (solid(i) && rng.next() < 0.7) darken(m, i, 0.88);
+      }
+    }
+  }
+  // Dirt splashed up from the street.
+  if (ground) {
+    for (let y = m.h - 4; y < m.h; y++) {
+      for (let x = 0; x < TEX_W; x++) {
+        const i = y * TEX_W + x;
+        if (solid(i)) darken(m, i, 1 - amount * 0.35 * ((y - (m.h - 4)) / 4 + 0.25));
+      }
+    }
+  }
+  return m;
 }

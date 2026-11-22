@@ -1,6 +1,6 @@
 # NEON//STREETS
 
-A text-heavy, grid-based cyberpunk crawler that runs in the browser. You walk rain-soaked city streets in
+A text-heavy, grid-based cyberpunk crawler (clean city-pop looks meet grimy back alleys) that runs in the browser. You walk rain-soaked city streets in
 first person, talk to characters, collect items and fight enemies. Admins write the districts: the map, the cast,
 branching dialogue and the story. Every run randomizes the start, the exit and the random encounters.
 
@@ -75,7 +75,9 @@ The editor has three tabs:
   *🎨 Draw or upload a pixel sprite* in their panel for the same pixel editor and uploader as the bestiary.
   The sprite is saved with the level and replaces the emoji everywhere in the game.
 - **Story & theme**: intro briefing, outro, an optional flag the exit requires (with a "locked" message), and the
-  visual theme (Neon night, Acid rain, Corpo plaza, Rust slums).
+  visual theme: *City pop* day and dusk (flat colours, cobalt skies, white facades with blue shadows,
+  inspired by Hiroshi Nagai), *Night city* (grimy, sodium-lit), *Acid rain*, *Corpo plaza* and *Rust slums*.
+  Each theme sets colours and style: facade grain and grime, glass, lit windows, shadow tint, wetness and sky.
 
 **Dialogue** is a list of nodes. When a conversation starts, the first node from the top whose condition holds
 opens, so conditional variants go above the default greeting. Each choice can:

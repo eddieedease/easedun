@@ -90,24 +90,31 @@ export class CityRenderer {
   }
 
   private drawSky(angle: number, horizon: number) {
-    const [top, bottom] = this.theme.sky;
+    const { sky: [top, bottom], skyline: [kr, kg, kb], skylineLights, stars, sun } = this.theme;
     const sw = this.skyline.length;
-    const [fr, fg, fb] = this.theme.fog;
+    const skylinePx = pack(kr, kg, kb);
+    const sunPx = sun ? pack(...sun.color) : 0;
+    const sunR = sun ? sun.size * VIEW_H : 0;
     for (let x = 0; x < VIEW_W; x++) {
       // Map each column to an absolute angle so the skyline stays put while turning.
       const a = angle + Math.atan(((2 * x) / VIEW_W - 1) * PLANE);
       const idx = ((Math.floor((a / (Math.PI * 2)) * sw) % sw) + sw) % sw;
       const skylineTop = horizon - this.skyline[idx] * horizon * 0.55;
+      // The sun sits low in the west (angle π), drawn in screen space.
+      const sunDx = sun ? (Math.atan2(Math.sin(a - Math.PI), Math.cos(a - Math.PI)) / PLANE) * (VIEW_W / 2) : 0;
       for (let y = 0; y < Math.min(horizon, VIEW_H); y++) {
         let px: number;
         if (y >= skylineTop) {
-          // Silhouette with sparse lit windows.
-          const lit = (idx * 7 + y * 13) % 53 === 0;
-          px = lit ? pack(255, 200, 120) : pack(fr * 0.45, fg * 0.45, fb * 0.45);
+          px = skylineLights && (idx * 7 + y * 13) % 53 === 0 ? pack(255, 200, 120) : skylinePx;
         } else {
           const t = y / horizon;
           px = pack(top[0] + (bottom[0] - top[0]) * t, top[1] + (bottom[1] - top[1]) * t, top[2] + (bottom[2] - top[2]) * t);
-          if ((x * 31 + y * 17) % 997 === 0 && t < 0.6) px = pack(220, 220, 255);
+          if (sun) {
+            const dy = y - (horizon - sunR * 0.9);
+            // Flat disc with a few horizontal cut-outs near its base, city-pop style.
+            if (sunDx * sunDx + dy * dy < sunR * sunR && !(dy > sunR * 0.2 && Math.floor(dy / 3) % 2 === 1)) px = sunPx;
+          }
+          if (stars && (x * 31 + y * 17) % 997 === 0 && t < 0.5) px = pack(230, 230, 255);
         }
         this.buf[y * VIEW_W + x] = px;
       }
@@ -119,9 +126,10 @@ export class CityRenderer {
     const { street, sidewalk, neon, fog: fogColor } = this.theme;
     const [sr, sg, sb] = street;
     const [wr, wg, wb] = sidewalk;
-    const pr = neon[0][0] * 0.18;
-    const pg = neon[0][1] * 0.18;
-    const pb = neon[0][2] * 0.18;
+    const wet = this.theme.wet > 0;
+    const pr = neon[0][0] * 0.18 * this.theme.wet;
+    const pg = neon[0][1] * 0.18 * this.theme.wet;
+    const pb = neon[0][2] * 0.18 * this.theme.wet;
     const [fr, fg, fb] = fogColor;
     const rayX0 = dirX - planeX;
     const rayY0 = dirY - planeY;
@@ -155,7 +163,7 @@ export class CityRenderer {
           // Paving tiles.
           const joint = (u * 8) % 1 < 0.08 || (v * 8) % 1 < 0.08 ? 0.7 : 1;
           r = wr * joint; g = wg * joint; b = wb * joint;
-        } else if (puddles[((fy * PUDDLE_RES) & PUDDLE_MASK) * PUDDLE_SIZE + ((fx * PUDDLE_RES) & PUDDLE_MASK)]) {
+        } else if (wet && puddles[((fy * PUDDLE_RES) & PUDDLE_MASK) * PUDDLE_SIZE + ((fx * PUDDLE_RES) & PUDDLE_MASK)]) {
           // Puddles reflecting neon.
           r = sr + pr; g = sg + pg; b = sb + pb;
         } else {
@@ -242,16 +250,17 @@ export class CityRenderer {
           const col = faceColumn(b, face, tx);
           const texelsPerPixel = TEX_W / scale;
           const fog = this.fogFactor(dist);
-          const shade = side === 1 ? 0.75 : 1;
+          // Shadow side of the building, tinted per theme (blue reads as sunlight).
+          const [shR, shG, shB] = side === 1 ? this.theme.shadow : NO_SHADE;
           for (let y = y0; y < y1; y++) {
             const h = (bottom - y) * texelsPerPixel;
             const c = sampleFacade(b, col, face, tx, h, time, glow);
             const lit = glow[0];
-            const s = lit ? 1 : shade;
+
             const f = lit ? fog * 0.45 : fog;
-            const r = (c & 255) * s;
-            const g = ((c >> 8) & 255) * s;
-            const bl = ((c >> 16) & 255) * s;
+            const r = (c & 255) * (lit ? 1 : shR);
+            const g = ((c >> 8) & 255) * (lit ? 1 : shG);
+            const bl = ((c >> 16) & 255) * (lit ? 1 : shB);
             this.buf[y * VIEW_W + x] = pack(r + (fogR - r) * f, g + (fogG - g) * f, bl + (fogB - bl) * f);
           }
           clip = Math.min(clip, y0);
@@ -378,6 +387,7 @@ function imageTexture(url: string): SpriteTexture | null {
   return null;
 }
 
+const NO_SHADE = [1, 1, 1] as const;
 const PUDDLE_SIZE = 128;
 const PUDDLE_MASK = PUDDLE_SIZE - 1;
 /** Puddle texels per cell; the pattern repeats every 4 cells. */

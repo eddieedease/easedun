@@ -9,7 +9,7 @@ export interface User {
 /** Grid cells: '#' building, '.' street, 'S' possible start, 'E' possible exit, '?' random spot. */
 export type CellChar = '#' | '.' | 'S' | 'E' | '?';
 
-export type ThemeId = 'neon-night' | 'acid-rain' | 'corpo' | 'rust-slums';
+export type ThemeId = 'city-pop' | 'city-pop-dusk' | 'neon-night' | 'acid-rain' | 'corpo' | 'rust-slums';
 
 export type ActorKind = 'npc' | 'enemy' | 'item' | 'terminal' | 'trigger';
 

@@ -30,9 +30,9 @@ import { Auth } from '../core/auth';
   styles: `
     header {
       display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px;
-      padding: 6px 16px; background: var(--panel-dark); border-bottom: 1px solid var(--neon-pink); box-shadow: 0 0 18px rgba(255,43,214,.25);
+      padding: 6px 16px; background: var(--panel-dark); border-bottom: 1px solid var(--neon-pink); 
     }
-    .logo { font-family: var(--font-display); color: var(--neon-pink); text-decoration: none; font-weight: 700; letter-spacing: .12em; text-shadow: 0 0 10px rgba(255,43,214,.7); }
+    .logo { font-family: var(--font-display); color: var(--neon-pink); text-decoration: none; font-weight: 700; letter-spacing: .12em; }
     nav { display: flex; gap: 12px; }
     nav a { color: var(--muted); text-decoration: none; }
     nav a.active, nav a:hover { color: var(--text); }

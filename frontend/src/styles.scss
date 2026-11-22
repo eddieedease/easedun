@@ -1,20 +1,26 @@
+// Clean cyberpunk with a city-pop touch (inspired by Hiroshi Nagai's flat, sunny palette):
+// gunmetal panels, warm off-white text, sun-yellow / cerulean / coral accents, hard flat
+// shadows instead of glows. Variable names are kept from the neon era so components
+// don't need to change; their values are new.
 :root {
-  --bg: #07060d;
-  --panel: #0e0c1a;
-  --panel-dark: #08070f;
-  --edge: #2a1f4a;
-  --edge-light: #4b3a80;
-  --text: #d8e6ff;
-  --muted: #7f86a8;
-  --neon-cyan: #00f0ff;
-  --neon-pink: #ff2bd6;
-  --neon-yellow: #f5f000;
-  --accent: var(--neon-cyan);
-  --danger: #ff2b6a;
-  --good: #3dffa2;
-  --font: 'Share Tech Mono', ui-monospace, monospace;
-  --font-display: 'Orbitron', 'Share Tech Mono', sans-serif;
-  --cut: 10px;
+  --bg: #0c0d0f;
+  --panel: #16181b;
+  --panel-dark: #101113;
+  --edge: #2a2d31;
+  --edge-light: #3b3f45;
+  --text: #d8d3c7;
+  --muted: #8b877d;
+  --neon-cyan: #4fa9c9;   // cerulean: secondary accent
+  --neon-pink: #e8704a;   // coral: labels, enemy plates
+  --neon-yellow: #f2b440; // sun yellow: primary accent, keys, highlights
+  --accent: var(--neon-yellow);
+  --danger: #d9493a;
+  --good: #5fae6e;
+  --font: 'IBM Plex Mono', ui-monospace, monospace;
+  --font-display: 'Barlow Condensed', 'IBM Plex Mono', sans-serif;
+  --cut: 8px;
+  // Fine grain, as an SVG noise tile.
+  --grain: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 .55 0'/></filter><rect width='100%' height='100%' filter='url(%23n)' opacity='.18'/></svg>");
 }
 
 * { box-sizing: border-box; }
@@ -23,49 +29,50 @@ html, body { margin: 0; min-height: 100%; }
 
 body {
   background:
-    radial-gradient(ellipse at top, rgba(255, 43, 214, 0.08), transparent 60%),
-    radial-gradient(ellipse at bottom, rgba(0, 240, 255, 0.06), transparent 60%),
+    var(--grain),
+    radial-gradient(ellipse at top, #1a1c20, transparent 70%),
     var(--bg);
   background-attachment: fixed;
   color: var(--text);
-  font: 17px/1.4 var(--font);
+  font: 15px/1.45 var(--font);
 }
 
-a { color: var(--neon-cyan); }
+a { color: var(--neon-yellow); }
 
 h1, h2, h3 {
   font-family: var(--font-display);
-  color: var(--neon-cyan);
-  font-weight: 700;
-  letter-spacing: .08em;
+  color: var(--text);
+  font-weight: 600;
+  letter-spacing: .06em;
   text-transform: uppercase;
-  text-shadow: 0 0 8px rgba(0, 240, 255, 0.6);
   margin: 0 0 .5em;
 }
 
-h1 { font-size: 1.5rem; }
-h2 { font-size: 1.1rem; }
+h1 { font-size: 1.7rem; }
+h2 { font-size: 1.15rem; }
 
-/* Angled HUD panel. */
+/* Industrial panel: flat, thin border, one cut corner, a little grain. */
 .panel {
   position: relative;
-  background: linear-gradient(180deg, rgba(42, 31, 74, 0.35), transparent 40%), var(--panel);
-  border: 1px solid var(--edge-light);
-  box-shadow: 0 0 0 1px #000, 0 0 14px rgba(0, 240, 255, 0.08), inset 0 0 20px rgba(255, 43, 214, 0.04);
-  clip-path: polygon(0 0, calc(100% - var(--cut)) 0, 100% var(--cut), 100% 100%, var(--cut) 100%, 0 calc(100% - var(--cut)));
+  background: var(--grain), var(--panel);
+  border: 1px solid var(--edge);
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.03) inset, 0 2px 8px rgba(0, 0, 0, 0.35);
+  clip-path: polygon(0 0, calc(100% - var(--cut)) 0, 100% var(--cut), 100% 100%, 0 100%);
   padding: 10px;
 }
 
 .panel-title {
   margin: -10px -10px 8px;
-  padding: 3px 10px;
-  background: linear-gradient(90deg, rgba(255, 43, 214, 0.25), transparent);
-  color: var(--neon-pink);
-  border-bottom: 1px solid var(--edge-light);
+  padding: 4px 10px;
+  background: var(--panel-dark);
+  color: var(--muted);
+  border-bottom: 1px solid var(--edge);
+  border-left: 3px solid var(--neon-yellow);
   font-family: var(--font-display);
+  font-weight: 600;
   text-transform: uppercase;
-  font-size: .7rem;
-  letter-spacing: .18em;
+  font-size: .8rem;
+  letter-spacing: .16em;
 }
 
 .btn {
@@ -75,20 +82,21 @@ h2 { font-size: 1.1rem; }
   gap: 6px;
   padding: 5px 14px;
   font: inherit;
-  color: var(--neon-cyan);
-  background: rgba(0, 240, 255, 0.06);
-  border: 1px solid rgba(0, 240, 255, 0.5);
+  color: var(--text);
+  background: #202327;
+  border: 1px solid var(--edge-light);
+  border-bottom-color: #15171a;
   cursor: pointer;
   text-decoration: none;
-  transition: background .12s, box-shadow .12s;
-  &:hover { background: rgba(0, 240, 255, 0.16); box-shadow: 0 0 10px rgba(0, 240, 255, 0.4); }
-  &:active { background: rgba(0, 240, 255, 0.3); }
-  &:disabled { opacity: .4; cursor: default; box-shadow: none; }
-  &.primary { background: var(--neon-cyan); color: #04121a; border-color: var(--neon-cyan); font-weight: bold; }
-  &.primary:hover { box-shadow: 0 0 16px var(--neon-cyan); }
-  &.pink { color: var(--neon-pink); border-color: rgba(255, 43, 214, 0.6); background: rgba(255, 43, 214, 0.08); }
-  &.pink:hover { background: rgba(255, 43, 214, 0.2); box-shadow: 0 0 10px rgba(255, 43, 214, 0.5); }
-  &.danger { color: var(--danger); border-color: var(--danger); background: rgba(255, 43, 106, 0.08); }
+  transition: background .12s, border-color .12s;
+  &:hover { background: #2a2e33; border-color: #50555c; }
+  &:active { background: #1a1c1f; }
+  &:disabled { opacity: .4; cursor: default; }
+  &.primary { background: var(--neon-yellow); color: #17130b; border-color: #f7c866; font-weight: 600; }
+  &.primary:hover { background: #f6c058; }
+  &.pink { color: #f2b9a3; border-color: rgba(232, 112, 74, 0.7); background: rgba(232, 112, 74, 0.12); }
+  &.pink:hover { background: rgba(232, 112, 74, 0.24); }
+  &.danger { color: #f0a59b; border-color: var(--danger); background: rgba(217, 73, 58, 0.1); }
 }
 
 input, select, textarea {
@@ -97,10 +105,10 @@ input, select, textarea {
   background: var(--panel-dark);
   border: 1px solid var(--edge-light);
   padding: 4px 8px;
-  &:focus { outline: none; border-color: var(--neon-cyan); box-shadow: 0 0 8px rgba(0, 240, 255, 0.35); }
+  &:focus { outline: none; border-color: var(--neon-yellow); }
 }
 
-input[type='checkbox'], input[type='range'] { accent-color: var(--neon-pink); }
+input[type='checkbox'], input[type='range'] { accent-color: var(--neon-yellow); }
 
 label { color: var(--muted); }
 

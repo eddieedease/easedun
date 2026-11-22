@@ -14,7 +14,7 @@ import { ActorDef, EnemyDef, LevelData } from '../core/models';
 const ZOOMS = [4, 6, 8, 10, 12, 16, 20, 24, 32];
 
 export const CELL_COLORS: Record<string, string> = {
-  '#': '#3a2f63',
+  '#': '#3c4148',
   '.': '#141826',
   S: '#13603a',
   E: '#0b5a80',
@@ -143,7 +143,7 @@ function draw(ctx: CanvasRenderingContext2D, d: LevelData, cell: number, spriteF
     }
   }
   if (cell >= 8) {
-    ctx.strokeStyle = 'rgba(0, 240, 255, 0.08)';
+    ctx.strokeStyle = 'rgba(79, 169, 201, 0.08)';
     ctx.beginPath();
     for (let x = 0; x <= d.width; x++) {
       ctx.moveTo(x * cell + 0.5, 0);
@@ -170,7 +170,7 @@ function draw(ctx: CanvasRenderingContext2D, d: LevelData, cell: number, spriteF
     } else if (cell >= 10 && actor) {
       ctx.fillText(actor.kind === 'trigger' ? '💬' : actor.sprite, cx, cy + 1);
     } else {
-      ctx.fillStyle = actor?.kind === 'enemy' ? '#ff2b6a' : '#00f0ff';
+      ctx.fillStyle = actor?.kind === 'enemy' ? '#d9493a' : '#4fa9c9';
       ctx.fillRect(cx - cell / 4, cy - cell / 4, cell / 2, cell / 2);
     }
   }

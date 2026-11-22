@@ -125,7 +125,7 @@ const KIND_HINTS: Record<ActorKind, string> = {
     .pixel-head label { flex-direction: row; display: flex; gap: 6px; align-items: center; font-size: .85em; }
     .btn.mini { padding: 0 8px; font-size: .85em; }
     .pick { font-size: 22px; background: var(--panel-dark); border: 1px solid var(--edge-light); cursor: pointer; padding: 2px 4px; }
-    .pick.active { border-color: var(--neon-cyan); box-shadow: 0 0 8px rgba(0, 240, 255, 0.5); }
+    .pick.active { border-color: var(--neon-cyan);  }
     .custom { width: 70px; font-size: 18px; }
     .fields { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 6px; }
     .fields label { display: flex; flex-direction: column; font-size: .85em; }
@@ -134,7 +134,7 @@ const KIND_HINTS: Record<ActorKind, string> = {
     h3 { margin-top: 8px; font-size: .9rem; }
     .sprite app-sprite { font-size: 36px; }
     .linked { display: flex; flex-wrap: wrap; gap: 6px 10px; align-items: center; padding: 6px 8px; border: 1px dashed var(--neon-cyan); font-size: .9em; }
-    .linked .trait { color: var(--neon-yellow); border: 1px solid rgba(245, 240, 0, 0.4); padding: 0 4px; font-size: .8em; }
+    .linked .trait { color: var(--neon-yellow); border: 1px solid rgba(242, 180, 64, 0.4); padding: 0 4px; font-size: .8em; }
   `,
 })
 export class ActorEditor {

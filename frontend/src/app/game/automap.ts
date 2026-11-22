@@ -13,10 +13,10 @@ import { isHidden, key } from './scenario';
 const SIZE = 240;
 const ZOOMS = [6, 9, 12, 16, 22, 30];
 const MARKS: Record<string, [string, string]> = {
-  npc: ['●', '#00b8d4'],
-  enemy: ['!', '#ff2b6a'],
-  item: ['◆', '#d4a000'],
-  terminal: ['▣', '#8a5cff'],
+  npc: ['●', '#4fa9c9'],
+  enemy: ['!', '#d9493a'],
+  item: ['◆', '#f2b440'],
+  terminal: ['▣', '#8c8fb8'],
 };
 
 /**
@@ -96,7 +96,7 @@ function drawMap(ctx: CanvasRenderingContext2D, engine: GameEngine, px: number, 
     offY = Math.floor(SIZE / 2 - (py + 0.5) * cell);
   }
 
-  ctx.fillStyle = '#05040b';
+  ctx.fillStyle = '#0e0f11';
   ctx.fillRect(0, 0, SIZE, SIZE);
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
@@ -107,18 +107,18 @@ function drawMap(ctx: CanvasRenderingContext2D, engine: GameEngine, px: number, 
     const sy = offY + y * cell;
     if (sx < -cell || sy < -cell || sx > SIZE || sy > SIZE) continue;
     if (engine.isWall(x, y)) {
-      ctx.fillStyle = '#2a1f4a';
+      ctx.fillStyle = '#2c3036';
       ctx.fillRect(sx, sy, cell, cell);
-      ctx.strokeStyle = 'rgba(255, 43, 214, 0.35)';
+      ctx.strokeStyle = 'rgba(232, 112, 74, 0.35)';
       ctx.strokeRect(sx + 0.5, sy + 0.5, cell - 1, cell - 1);
       continue;
     }
-    ctx.fillStyle = '#121624';
+    ctx.fillStyle = '#1b1d21';
     ctx.fillRect(sx, sy, cell, cell);
 
     const found = actors.get(key(x, y));
     const actor = found && !isHidden(found) ? found : undefined;
-    const mark = x === exit.x && y === exit.y ? (['▼', '#00f0ff'] as const) : actor ? MARKS[actor.def.kind] : undefined;
+    const mark = x === exit.x && y === exit.y ? (['▼', '#4fa9c9'] as const) : actor ? MARKS[actor.def.kind] : undefined;
     if (mark) {
       ctx.fillStyle = mark[1];
       ctx.fillText(mark[0], sx + cell / 2, sy + cell / 2 + 1);
@@ -129,9 +129,7 @@ function drawMap(ctx: CanvasRenderingContext2D, engine: GameEngine, px: number, 
   ctx.save();
   ctx.translate(offX + px * cell + cell / 2, offY + py * cell + cell / 2);
   ctx.rotate((dir * Math.PI) / 2);
-  ctx.fillStyle = '#f5f000';
-  ctx.shadowColor = '#f5f000';
-  ctx.shadowBlur = 6;
+  ctx.fillStyle = '#f2b440';
   ctx.beginPath();
   ctx.moveTo(0, -cell * 0.42);
   ctx.lineTo(cell * 0.34, cell * 0.34);

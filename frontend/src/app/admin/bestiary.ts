@@ -44,11 +44,11 @@ import { TRAIT_INFO } from '../game/level-format';
     .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 12px; }
     .card { display: flex; gap: 12px; align-items: center; color: var(--text); text-decoration: none; }
     .card:hover { border-color: var(--neon-cyan); }
-    img { width: 72px; height: 72px; image-rendering: pixelated; filter: drop-shadow(0 0 6px rgba(255, 43, 214, 0.5)); }
+    img { width: 72px; height: 72px; image-rendering: pixelated; filter: drop-shadow(0 3px 0 rgba(0, 0, 0, 0.45)); }
     h2 { margin: 0 0 2px; font-size: .95rem; }
     small { color: var(--muted); }
     .traits { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 4px; }
-    .traits span { font-size: .75em; color: var(--neon-yellow); border: 1px solid rgba(245, 240, 0, 0.4); padding: 0 4px; }
+    .traits span { font-size: .75em; color: var(--neon-yellow); border: 1px solid rgba(242, 180, 64, 0.4); padding: 0 4px; }
   `,
 })
 export class BestiaryPage {

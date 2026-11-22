@@ -18,7 +18,7 @@
   position: relative;
   align-self: start;
   border: 1px solid var(--neon-cyan);
-  box-shadow: 0 0 18px rgba(0, 240, 255, 0.25), 0 0 0 1px #000;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
   overflow: hidden;
 }
 .contact { grid-area: contact; }
@@ -72,12 +72,12 @@
 
 .bar {
   height: 8px;
-  background: rgba(255, 43, 106, 0.2);
-  border: 1px solid rgba(61, 255, 162, 0.4);
-  span { display: block; height: 100%; background: var(--good); box-shadow: 0 0 8px var(--good); transition: width .25s; }
-  &.enemy { border-color: rgba(255, 43, 106, 0.5); margin-top: 4px; }
+  background: rgba(217, 73, 58, 0.2);
+  border: 1px solid rgba(95, 174, 110, 0.4);
+  span { display: block; height: 100%; background: var(--good);  transition: width .25s; }
+  &.enemy { border-color: rgba(217, 73, 58, 0.5); margin-top: 4px; }
   &.hurt { animation: hp-hurt .45s; }
-  &.enemy span { background: var(--danger); box-shadow: 0 0 8px var(--danger); }
+  &.enemy span { background: var(--danger);  }
 }
 
 .stats {
@@ -110,10 +110,10 @@
   small { position: absolute; right: 2px; bottom: 0; font-size: 10px; color: var(--muted); }
 }
 button.slot { cursor: pointer; }
-button.slot:hover { border-color: var(--neon-cyan); box-shadow: 0 0 8px rgba(0, 240, 255, 0.4); }
+button.slot:hover { border-color: var(--neon-cyan);  }
 
 .target { display: flex; gap: 10px; align-items: center; margin-bottom: 8px; }
-.big { font-size: 40px; filter: drop-shadow(0 0 6px rgba(255, 43, 214, 0.6)); }
+.big { font-size: 40px; filter: drop-shadow(0 3px 0 rgba(0, 0, 0, 0.45)); }
 .target-name { color: var(--text); }
 .target small { color: var(--muted); }
 .target small.hostile { color: var(--danger); }
@@ -161,16 +161,16 @@ kbd { font: inherit; font-size: .75em; color: var(--muted); border: 1px solid va
   place-content: center;
   text-align: center;
   padding: 16px;
-  background: rgba(4, 2, 12, 0.82);
+  background: rgba(10, 11, 13, 0.82);
   h2 { font-size: 1.8rem; }
-  h2.lost { color: var(--danger); text-shadow: 0 0 10px var(--danger); }
+  h2.lost { color: var(--danger); }
   p { white-space: pre-line; max-width: 520px; }
 }
 
 .overlay-actions { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; }
 
 @keyframes hp-hurt {
-  0%, 60% { border-color: var(--danger); box-shadow: 0 0 12px var(--danger); background: rgba(255, 43, 106, 0.45); }
+  0%, 60% { border-color: var(--danger);  background: rgba(217, 73, 58, 0.45); }
 }
 
 // Fullscreen: the view takes all the height it can; the bottom row stays compact.

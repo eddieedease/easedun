@@ -118,17 +118,17 @@ function render_page(callable $body): void
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Neon Streets installer</title>
 <style>
-  :root { --bg:#07060d; --panel:#0e0c1a; --edge:#4b3a80; --text:#d8e6ff; --muted:#7f86a8; --accent:#00f0ff; --bad:#ff2b6a; }
+  :root { --bg:#0c0d0f; --panel:#16181b; --edge:#3b3f45; --text:#d8d3c7; --muted:#8b877d; --accent:#f2b440; --bad:#d9493a; }
   * { box-sizing: border-box; }
   body { margin:0; min-height:100vh; background:var(--bg); color:var(--text); font:16px/1.5 ui-monospace, monospace; display:flex; justify-content:center; padding:24px 16px; }
-  main { width:100%; max-width:560px; background:var(--panel); border:3px solid var(--edge); padding:24px; box-shadow:0 0 0 3px #000; }
+  main { width:100%; max-width:560px; background:var(--panel); border:1px solid var(--edge); border-top:3px solid var(--accent); padding:24px; box-shadow:0 2px 12px rgba(0,0,0,.4); }
   h1 { margin:0 0 4px; color:var(--accent); letter-spacing:.05em; }
   h2 { color:var(--accent); font-size:1.1rem; border-bottom:1px solid var(--edge); padding-bottom:4px; margin-top:28px; }
   label { display:block; margin:10px 0 2px; color:var(--muted); font-size:.9rem; }
   input[type=text], input[type=password], input[type=number] { width:100%; padding:8px; background:#120f0d; color:var(--text); border:1px solid var(--edge); font:inherit; }
   .row { display:grid; grid-template-columns:1fr 110px; gap:12px; }
   .check { display:flex; gap:8px; align-items:center; margin-top:12px; color:var(--text); }
-  .btn, button { display:inline-block; margin-top:24px; padding:10px 22px; background:var(--accent); color:#04121a; border:0; font:bold 1rem ui-monospace, monospace; cursor:pointer; text-decoration:none; }
+  .btn, button { display:inline-block; margin-top:24px; padding:10px 22px; background:var(--accent); color:#17130b; border:0; font:bold 1rem ui-monospace, monospace; cursor:pointer; text-decoration:none; }
   .errors { background:#3a1715; border:1px solid var(--bad); padding:8px 14px; }
   .hint { color:var(--muted); font-size:.85rem; }
   pre { background:#120f0d; border:1px solid var(--edge); padding:12px; overflow:auto; font-size:.8rem; }

@@ -15,9 +15,9 @@ type Tool = 'pencil' | 'eraser' | 'fill' | 'picker';
 
 const VIEW = 384;
 const PALETTE = [
-  '#000000', '#1a1426', '#3a2f63', '#5a5466', '#9a94a8', '#ffffff',
-  '#ff2bd6', '#00f0ff', '#f5f000', '#3dffa2', '#ff2b6a', '#8a5cff',
-  '#ff7a1a', '#7a3a1a', '#c8a070', '#2a5a2a', '#1e4fa0', '#a0e0ff',
+  '#000000', '#1a1426', '#3c4148', '#5a5466', '#9a94a8', '#ffffff',
+  '#e8704a', '#4fa9c9', '#f2b440', '#5fae6e', '#d9493a', '#8c8fb8',
+  '#ff7a1a', '#7a3a1a', '#c8a070', '#2a5a2a', '#2f6fa8', '#a0e0ff',
 ];
 const UNDO_LIMIT = 40;
 
@@ -95,7 +95,7 @@ export class PixelEditor {
     { id: 'picker', icon: '⊙', label: 'Pick colour' },
   ];
   protected readonly tool = signal<Tool>('pencil');
-  protected readonly color = signal('#00f0ff');
+  protected readonly color = signal('#4fa9c9');
   protected readonly mirror = signal(false);
   protected readonly canUndo = signal(false);
   /** Bumped on every pixel change so the canvas redraws. */
@@ -322,7 +322,7 @@ export class PixelEditor {
       ctx.stroke();
     }
     if (this.mirror()) {
-      ctx.strokeStyle = 'rgba(245, 240, 0, 0.5)';
+      ctx.strokeStyle = 'rgba(242, 180, 64, 0.5)';
       ctx.beginPath();
       ctx.moveTo(VIEW / 2, 0);
       ctx.lineTo(VIEW / 2, VIEW);

@@ -37,7 +37,7 @@ export function emptyLevel(width = 20, height = 16): LevelData {
     width,
     height,
     rows,
-    theme: 'neon-night',
+    theme: 'city-pop',
     story: { intro: '', outro: 'You made it out.', exitFlag: '', exitLockedText: 'The way is blocked.' },
     actors: [],
     placements: [],

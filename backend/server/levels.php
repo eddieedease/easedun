@@ -2,7 +2,7 @@
 declare(strict_types=1);
 
 const LEVEL_CELLS = '#.SE?';
-const LEVEL_THEMES = ['neon-night', 'acid-rain', 'corpo', 'rust-slums'];
+const LEVEL_THEMES = ['city-pop', 'city-pop-dusk', 'neon-night', 'acid-rain', 'corpo', 'rust-slums'];
 const ACTOR_KINDS = ['npc', 'enemy', 'item', 'terminal', 'trigger'];
 const MAX_LEVEL_BYTES = 2_000_000;
 
