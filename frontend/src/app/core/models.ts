@@ -6,6 +6,42 @@ export interface User {
   role: Role;
 }
 
+/** An account as the admin Users page sees it. */
+export interface Account extends User {
+  email: string | null;
+  verified: boolean;
+  createdAt: string;
+}
+
+export interface AccountInput {
+  username?: string;
+  email?: string;
+  password?: string;
+  role?: Role;
+  verified?: boolean;
+}
+
+export interface MailSettings {
+  method: 'mail' | 'smtp';
+  from: string;
+  fromName: string;
+  smtpHost: string;
+  smtpPort: number;
+  smtpSecure: 'none' | 'tls' | 'ssl';
+  smtpUser: string;
+  /** Write-only: a new SMTP password. */
+  smtpPass?: string;
+  smtpPassSet?: boolean;
+  clearSmtpPass?: boolean;
+}
+
+export interface SiteSettings {
+  registrationOpen: boolean;
+  siteUrl: string;
+  detectedSiteUrl?: string;
+  mail: MailSettings;
+}
+
 /** Grid cells: '#' building, '.' street, 'S' possible start, 'E' possible exit, '?' random spot. */
 export type CellChar = '#' | '.' | 'S' | 'E' | '?';
 

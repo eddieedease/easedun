@@ -115,3 +115,19 @@ label { color: var(--muted); }
 .error { color: var(--danger); }
 
 .page { max-width: 1200px; margin: 0 auto; padding: 16px; }
+
+/* Centred card for login, sign-up and password pages. */
+.auth {
+  display: flex;
+  min-height: 100vh;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  main { width: 100%; max-width: 400px; }
+  h2 { font-size: 1rem; color: var(--neon-yellow); }
+  form { display: flex; flex-direction: column; gap: 6px; }
+  button { margin-top: 12px; }
+  .hint { color: var(--muted); font-size: .9em; }
+  .links { display: flex; justify-content: space-between; gap: 8px; flex-wrap: wrap; margin: 14px 0 0; font-size: .9em; }
+  .hp { position: absolute; left: -9999px; width: 1px; height: 1px; opacity: 0; }
+}

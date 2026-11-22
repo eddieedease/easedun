@@ -18,8 +18,11 @@ services:
       INSTALLER_DB_USER: dungeon
       INSTALLER_DB_PASS: dungeon
       INSTALLER_DEV_DEFAULTS: "1"
+      INSTALLER_SMTP_HOST: mailpit
+      INSTALLER_SMTP_PORT: "1025"
     depends_on:
       - db
+      - mailpit
 
   db:
     image: mysql:8.4
@@ -41,6 +44,12 @@ services:
       PMA_PASSWORD: root
     depends_on:
       - db
+
+  # Catches every email the game sends during development: http://localhost:8025
+  mailpit:
+    image: axllent/mailpit:v1.27
+    ports:
+      - "8025:8025"
 
 volumes:
   dbdata:

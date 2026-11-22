@@ -10,6 +10,8 @@ export class Auth {
   private readonly api = inject(Api);
 
   readonly installed = signal(true);
+  /** Whether visitors may create their own account. */
+  readonly registration = signal(false);
   readonly user = signal<User | null>(null);
   /** Lets an admin browse the app the way a regular player sees it. */
   readonly viewAsPlayer = signal(readFlag(VIEW_KEY));
@@ -21,6 +23,7 @@ export class Auth {
     try {
       const status = await this.api.status();
       this.installed.set(status.installed);
+      this.registration.set(status.registration);
       this.user.set(status.user);
     } catch {
       // Backend unreachable: keep defaults, pages will show their own errors.

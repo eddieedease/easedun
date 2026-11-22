@@ -29,11 +29,11 @@ scripts/            build-package.sh (shared-hosting package)
 Requirements: Node 22+, Docker.
 
 ```bash
-npm run backend:up          # PHP on :8080, phpMyAdmin on :8081
+npm run backend:up          # PHP on :8080, phpMyAdmin on :8081, Mailpit on :8025
 ```
 
 The first time, open http://localhost:8080/install/. In dev mode the form is prefilled for the Docker database
-and creates an admin (`admin` / `admin123`), a test player (`player` / `player123`) and a demo level.
+and Mailpit, and creates an admin (`admin` / `admin123`), a test player (`player` / `player123`) and a demo level.
 
 ```bash
 npm start                   # ng serve on http://localhost:4200, proxies /api and /install to :8080
@@ -41,20 +41,46 @@ npm start                   # ng serve on http://localhost:4200, proxies /api an
 
 - **Admin vs. player**: log in as `admin` and use the *Admin view / Viewing as player* toggle in the header to see
   what players see. You can also log in as `player`.
+- **Email**: every email the game sends (activation, password reset, tests) lands in Mailpit: http://localhost:8025
 - **Start over**: `npm run backend:reset` drops the database volume and `config.php`. Then run the installer again.
 - **phpMyAdmin**: http://localhost:8081
 
-## Building for shared hosting
+## Deploying to shared hosting
 
 ```bash
-npm run package                          # site in the web root
-BASE_HREF=/neon/ npm run package         # site in a subfolder
+npm run package
 ```
 
-This creates `dist/package/` and `dist/crawlease-*.zip`. Upload the contents to your host, open
-`https://your-site/install/`, fill in the database details from your hosting panel, and delete `install/` afterwards.
-The package contains the Angular build, `api/`, `install/`, `server/` and a `.htaccess` for deep links.
-The host needs PHP 8.1+ with `pdo_mysql`, and MySQL or MariaDB.
+This creates `dist/package/` and `dist/crawlease-*.zip`. The host needs PHP 8.1+ with `pdo_mysql`, and MySQL or MariaDB.
+
+1. Create a database and database user in your hosting panel.
+2. Upload the contents of `dist/package/` (or unzip the zip) to the folder of your domain, subdomain or subfolder.
+3. Open `https://your-site/install/` (e.g. `https://game.example.com/install/` or `https://example.com/crawlease/install/`).
+4. Fill in:
+   - **Database**: host, name, user, password, table prefix.
+   - **Site address**: *domain/subdomain root* or *subfolder* (with its path) and the full web address. The installer
+     detects both and points the app at that folder (`<base href>` in `index.html`, `RewriteBase` in `.htaccess`), so
+     one package works anywhere.
+   - **Admin account**: username, email, password.
+   - **Email**: PHP `mail()` or SMTP (server, port, security, user, password) and a sender address on your domain.
+     Tick *send a test email* to check it right away.
+   - **Players**: whether visitors may create their own account.
+5. Delete the `install/` folder afterwards.
+
+Existing installs upgrade their database automatically on the first request after uploading a new version.
+
+## Accounts
+
+- **Sign-up** (when enabled in *Settings*): username, email and password. The account must be activated through the
+  link in the email (valid 48 hours) before it can log in; *Send a new activation link* appears on the login screen.
+- **Forgot password**: a reset link by email, valid for 1 hour.
+- **Log in** with username or email.
+- **Admin › Users**: create players or admins (active right away), change roles, set passwords and emails, resend or
+  skip activation, delete accounts. The last admin can't be demoted or deleted.
+- **Admin › Settings**: open/close sign-up, the public site address used in email links, and the email setup with a
+  *send test email* button.
+- **Protection**: rate limits on login, sign-up and email requests per IP, a honeypot field against bots, one-time
+  tokens stored only as hashes, and replies that never reveal whether an email address is registered.
 
 ## Writing districts (the editor)
 

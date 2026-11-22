@@ -14,6 +14,8 @@ import { Auth } from '../core/auth';
         @if (auth.adminView()) {
           <a routerLink="/admin" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">Level editor</a>
           <a routerLink="/admin/enemies" routerLinkActive="active">Bestiary</a>
+          <a routerLink="/admin/users" routerLinkActive="active">Users</a>
+          <a routerLink="/admin/settings" routerLinkActive="active">Settings</a>
         }
       </nav>
       <span class="spacer"></span>

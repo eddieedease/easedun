@@ -3,18 +3,21 @@ declare(strict_types=1);
 
 const SERVER_DIR = __DIR__;
 const CONFIG_FILE = __DIR__ . '/config.php';
-const SCHEMA_VERSION = 2;
+const SCHEMA_VERSION = 3;
 
 require_once __DIR__ . '/http.php';
 require_once __DIR__ . '/schema.php';
 require_once __DIR__ . '/levels.php';
 require_once __DIR__ . '/enemies.php';
+require_once __DIR__ . '/mail.php';
+require_once __DIR__ . '/accounts.php';
 
 function app_config(): ?array
 {
-    static $config = false;
-    if ($config === false) {
-        $config = is_file(CONFIG_FILE) ? require CONFIG_FILE : null;
+    static $config = null;
+    // Only a found config is cached: the installer writes config.php mid-request.
+    if ($config === null && is_file(CONFIG_FILE)) {
+        $config = require CONFIG_FILE;
     }
     return $config;
 }
@@ -101,19 +104,87 @@ function require_admin(): array
     return $user;
 }
 
-/**
- * Brings an existing install up to the current schema. Every statement is
- * idempotent (CREATE TABLE IF NOT EXISTS), so upgrades just re-run them.
- */
+/** Runs the upgrade steps an existing install hasn't had yet. */
 function ensure_schema(): void
 {
     $settings = t('settings');
-    $version = (int)(db()->query("SELECT value FROM {$settings} WHERE name = 'schema_version'")->fetchColumn() ?: 0);
+    $version = (int)(db()->query("SELECT value FROM {$settings} WHERE name = 'schema_version'")->fetchColumn() ?: 1);
     if ($version >= SCHEMA_VERSION) {
         return;
     }
-    foreach (schema_statements(app_config()['db']['prefix'] ?? '') as $sql) {
-        db()->exec($sql);
+    foreach (schema_migrations(app_config()['db']['prefix'] ?? '') as $target => $statements) {
+        if ($target <= $version) {
+            continue;
+        }
+        foreach ($statements as $sql) {
+            db()->exec($sql);
+        }
+        db()->prepare("REPLACE INTO {$settings} (name, value) VALUES ('schema_version', ?)")->execute([(string)$target]);
     }
-    db()->prepare("REPLACE INTO {$settings} (name, value) VALUES ('schema_version', ?)")->execute([(string)SCHEMA_VERSION]);
+}
+
+// ---- settings ---------------------------------------------------------------
+
+/** Reads a value from the settings table (cached per request). */
+function setting(string $name, string $default = ''): string
+{
+    static $cache = null;
+    if ($name === '') {
+        $cache = null; // reset after writes
+        return '';
+    }
+    if ($cache === null) {
+        $cache = [];
+        foreach (db()->query('SELECT name, value FROM ' . t('settings'))->fetchAll() as $row) {
+            $cache[$row['name']] = $row['value'];
+        }
+    }
+    return $cache[$name] ?? $default;
+}
+
+/** @param array<string, string> $values */
+function set_settings(array $values): void
+{
+    $stmt = db()->prepare('REPLACE INTO ' . t('settings') . ' (name, value) VALUES (?, ?)');
+    foreach ($values as $name => $value) {
+        $stmt->execute([$name, (string)$value]);
+    }
+    setting(''); // drop the cache
+}
+
+/**
+ * Public base URL of the game, ending in a slash (e.g. https://game.example.com/ or
+ * https://example.com/crawlease/). Set by the installer; guessed from the request otherwise.
+ */
+function site_url(): string
+{
+    $url = trim(setting('site_url'));
+    if ($url !== '') {
+        return rtrim($url, '/') . '/';
+    }
+    $https = !empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off';
+    $host = $_SERVER['HTTP_HOST'] ?? 'localhost';
+    // The API lives at <base>/api/index.php.
+    $base = rtrim(dirname(dirname($_SERVER['SCRIPT_NAME'] ?? '/api/index.php')), '/\\');
+    return ($https ? 'https' : 'http') . '://' . $host . $base . '/';
+}
+
+// ---- rate limiting ------------------------------------------------------------
+
+function client_ip(): string
+{
+    return substr((string)($_SERVER['REMOTE_ADDR'] ?? '0.0.0.0'), 0, 45);
+}
+
+/** Allows at most $max $action calls per IP within $minutes, then answers 429. */
+function rate_limit(string $action, int $max, int $minutes): void
+{
+    $table = t('attempts');
+    db()->exec("DELETE FROM {$table} WHERE created_at < NOW() - INTERVAL 1 DAY");
+    $stmt = db()->prepare("SELECT COUNT(*) FROM {$table} WHERE action = ? AND ip = ? AND created_at > NOW() - INTERVAL ? MINUTE");
+    $stmt->execute([$action, client_ip(), $minutes]);
+    if ((int)$stmt->fetchColumn() >= $max) {
+        fail(429, 'too_many_requests', 'Too many attempts. Please wait a few minutes and try again.');
+    }
+    db()->prepare("INSERT INTO {$table} (action, ip) VALUES (?, ?)")->execute([$action, client_ip()]);
 }
