@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Builds an upload-ready package for shared hosting:
 #   dist/package/                 -> upload the contents to your web root (or a subfolder)
-#   dist/neon-streets-*.zip    -> the same, zipped
+#   dist/crawlease-*.zip    -> the same, zipped
 #
 # Deploying in a subfolder? Set BASE_HREF, e.g. BASE_HREF=/dungeon/ ./scripts/build-package.sh
 set -euo pipefail
@@ -36,8 +36,8 @@ DirectoryIndex index.html index.php
 </IfModule>
 HTACCESS
 
-ZIP="$ROOT/dist/neon-streets-$(date +%Y%m%d-%H%M).zip"
-rm -f "$ROOT"/dist/neon-streets-*.zip
+ZIP="$ROOT/dist/crawlease-$(date +%Y%m%d-%H%M).zip"
+rm -f "$ROOT"/dist/crawlease-*.zip
 if command -v zip >/dev/null; then
   (cd "$OUT" && zip -qr "$ZIP" .)
   echo "» Created $ZIP"

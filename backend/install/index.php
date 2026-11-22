@@ -116,7 +116,7 @@ function render_page(callable $body): void
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Neon Streets installer</title>
+<title>Crawlease installer</title>
 <style>
   :root { --bg:#0c0d0f; --panel:#16181b; --edge:#3b3f45; --text:#d8d3c7; --muted:#8b877d; --accent:#f2b440; --bad:#d9493a; }
   * { box-sizing: border-box; }
@@ -136,7 +136,7 @@ function render_page(callable $body): void
 </style>
 </head>
 <body><main>
-  <h1>NEON//STREETS installer</h1>
+  <h1>CRAWLEASE installer</h1>
   <?php $body(); ?>
 </main></body>
 </html>

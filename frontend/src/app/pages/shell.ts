@@ -8,7 +8,7 @@ import { Auth } from '../core/auth';
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <header>
-      <a routerLink="/" class="logo">NEON//STREETS</a>
+      <a routerLink="/" class="logo">CRAWLEASE</a>
       <nav>
         <a routerLink="/" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">Play</a>
         @if (auth.adminView()) {

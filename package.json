@@ -1,5 +1,5 @@
 {
-  "name": "neon-streets",
+  "name": "crawlease",
   "private": true,
   "scripts": {
     "backend:up": "docker compose -p dungeon up -d --build",

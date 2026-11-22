@@ -1,4 +1,4 @@
-# NEON//STREETS
+# Crawlease
 
 A text-heavy, grid-based cyberpunk crawler (clean city-pop looks meet grimy back alleys) that runs in the browser. You walk rain-soaked city streets in
 first person, talk to characters, collect items and fight enemies. Admins write the districts: the map, the cast,
@@ -51,7 +51,7 @@ npm run package                          # site in the web root
 BASE_HREF=/neon/ npm run package         # site in a subfolder
 ```
 
-This creates `dist/package/` and `dist/neon-streets-*.zip`. Upload the contents to your host, open
+This creates `dist/package/` and `dist/crawlease-*.zip`. Upload the contents to your host, open
 `https://your-site/install/`, fill in the database details from your hosting panel, and delete `install/` afterwards.
 The package contains the Angular build, `api/`, `install/`, `server/` and a `.htaccess` for deep links.
 The host needs PHP 8.1+ with `pdo_mysql`, and MySQL or MariaDB.

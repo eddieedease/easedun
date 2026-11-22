@@ -10,7 +10,7 @@ import { Auth } from '../core/auth';
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <main class="panel">
-      <h1>NEON//STREETS</h1>
+      <h1>CRAWLEASE</h1>
       @if (!auth.installed()) {
         <p>The game is not installed yet.</p>
         <a class="btn primary" href="install/">Run the installer</a>
